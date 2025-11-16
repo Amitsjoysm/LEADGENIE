@@ -39,22 +39,22 @@ class LeadGenAPITester:
         print(f"{status} {test_name}: {details}")
         
     def make_request(self, method: str, endpoint: str, data: Dict = None, 
-                    headers: Dict = None, files: Dict = None) -> requests.Response:
+                    headers: Dict = None, files: Dict = None, params: Dict = None) -> requests.Response:
         """Make HTTP request with error handling"""
         url = f"{self.base_url}{endpoint}"
         
         try:
             if method.upper() == "GET":
-                response = self.session.get(url, headers=headers, params=data)
+                response = self.session.get(url, headers=headers, params=data or params)
             elif method.upper() == "POST":
                 if files:
-                    response = self.session.post(url, headers=headers, data=data, files=files)
+                    response = self.session.post(url, headers=headers, data=data, files=files, params=params)
                 else:
-                    response = self.session.post(url, headers=headers, json=data)
+                    response = self.session.post(url, headers=headers, json=data, params=params)
             elif method.upper() == "PATCH":
-                response = self.session.patch(url, headers=headers, json=data)
+                response = self.session.patch(url, headers=headers, json=data, params=params)
             elif method.upper() == "DELETE":
-                response = self.session.delete(url, headers=headers)
+                response = self.session.delete(url, headers=headers, params=params)
             else:
                 raise ValueError(f"Unsupported method: {method}")
                 
