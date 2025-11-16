@@ -118,9 +118,8 @@ async def register(user_data: UserCreate):
     """Register a new user"""
     return await auth_service.register_user(user_data)
 
-@api_router.post("/auth/login", response_model=Token)
-@limiter.limit("10/minute")
-async def login(request: Request, login_data: UserLogin):
+@api_router.post("/auth/login", response_model=Token, dependencies=[Depends(RateLimiter(times=10, seconds=60))])
+async def login(login_data: UserLogin):
     """Login user"""
     return await auth_service.login_user(login_data)
 
