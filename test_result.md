@@ -249,7 +249,7 @@ backend:
     file: "tasks.py, server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -260,6 +260,9 @@ backend:
       - working: true
         agent: "main"
         comment: "✅ FIXED: Installed Redis server and configured it to run via supervisor. Created supervisor configs for both Redis and Celery worker. Both services now running properly. Redis on port 6379, Celery worker with 4 concurrent workers."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Bulk upload status endpoint working correctly. Returns 'pending' status for task queries. Redis running on port 6379, Celery worker running with 4 concurrent workers. No Redis connection errors. Supervisor status shows all services running."
   
   - task: "Data Masking (emails, phones, domains)"
     implemented: true
