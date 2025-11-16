@@ -409,7 +409,7 @@ class LeadGenAPITester:
                 revealed_emails = reveal_result.get("emails", [])
                 
                 if revealed_emails and any("***" not in email for email in revealed_emails):
-                    self.log_result("Profile Reveal - Email", True, f"Email revealed: {revealed_email}")
+                    self.log_result("Profile Reveal - Email", True, f"Email revealed: {revealed_emails}")
                     
                     # Check credits were deducted
                     me_response = self.make_request("GET", "/auth/me", headers=headers)
@@ -431,7 +431,7 @@ class LeadGenAPITester:
                             else:
                                 self.log_result("Profile Reveal - No Double Charge", False, f"Charged again: {new_credits} -> {final_credits}")
                 else:
-                    self.log_result("Profile Reveal - Email", False, f"Email not properly revealed: {revealed_email}")
+                    self.log_result("Profile Reveal - Email", False, f"Email not properly revealed: {revealed_emails}")
             else:
                 self.log_result("Profile Reveal - Email", False, f"Status: {response.status_code}, Response: {response.text}")
                 
