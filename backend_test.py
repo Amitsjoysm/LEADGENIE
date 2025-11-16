@@ -280,9 +280,9 @@ class LeadGenAPITester:
                     user_id = users[0].get("id")
                     original_credits = users[0].get("credits", 0)
                     
-                    # Add credits
-                    response = self.make_request("POST", f"/users/{user_id}/credits", 
-                                               data={"credits": 10}, headers=headers)
+                    # Add credits - pass credits as query parameter
+                    response = self.make_request("POST", f"/users/{user_id}/credits?credits=10", 
+                                               headers=headers)
                     if response.status_code == 200:
                         updated_user = response.json()
                         new_credits = updated_user.get("credits", 0)
