@@ -10,7 +10,7 @@ import json
 
 def test_rate_limiting():
     """Test rate limiting with detailed debugging"""
-    base_url = "https://rate-limit-enforcer.preview.emergentagent.com/api"
+    base_url = "https://advanced-filters.preview.emergentagent.com/api"
     
     print("🔍 Testing Rate Limiting on Auth Endpoints")
     print("=" * 60)

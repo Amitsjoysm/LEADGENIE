@@ -17,7 +17,7 @@ from typing import Dict, Any
 
 class CriticalFixesTester:
     def __init__(self):
-        self.base_url = "https://rate-limit-enforcer.preview.emergentagent.com/api"
+        self.base_url = "https://advanced-filters.preview.emergentagent.com/api"
         self.session = requests.Session()
         self.admin_token = None
         self.user_token = None
