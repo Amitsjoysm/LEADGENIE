@@ -406,9 +406,9 @@ class LeadGenAPITester:
             
             if response.status_code == 200:
                 reveal_result = response.json()
-                revealed_email = reveal_result.get("email")
+                revealed_emails = reveal_result.get("emails", [])
                 
-                if revealed_email and "***" not in revealed_email:
+                if revealed_emails and any("***" not in email for email in revealed_emails):
                     self.log_result("Profile Reveal - Email", True, f"Email revealed: {revealed_email}")
                     
                     # Check credits were deducted
