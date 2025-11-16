@@ -224,32 +224,23 @@ async def delete_profile(
     return {"message": "Profile deleted successfully"}
 
 @api_router.post("/profiles/{profile_id}/reveal")
-async def reveal_contact(
+async def reveal_contact_endpoint(
     profile_id: str,
     reveal_request: RevealRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Reveal email or phone (costs credits)"""
-    # Check credit cost
-    cost = config.EMAIL_REVEAL_COST if reveal_request.reveal_type == 'email' else config.PHONE_REVEAL_COST
-    
-    if current_user.credits < cost:
+    """Reveal email or phone (costs credits, charges only once per unique reveal)"""
+    if reveal_request.reveal_type not in ['email', 'phone']:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Insufficient credits. Need {cost} credits."
+            detail="reveal_type must be 'email' or 'phone'"
         )
     
-    # Get unmasked profile
-    profile = await profile_service.get_profile_by_id(profile_id, mask_data=False)
-    
-    # Deduct credits
-    await user_service.deduct_credits(current_user.id, cost)
-    
-    # Return revealed data
-    if reveal_request.reveal_type == 'email':
-        return {"emails": profile.emails}
-    else:
-        return {"phones": profile.phones}
+    return await profile_service.reveal_contact(
+        user_id=current_user.id,
+        profile_id=profile_id,
+        reveal_type=reveal_request.reveal_type
+    )
 
 # ========== COMPANY ENDPOINTS ==========
 
