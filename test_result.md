@@ -290,11 +290,11 @@ backend:
   
   - task: "Rate Limiting"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 1
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -302,6 +302,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ Rate limiting not working. Made 15 rapid login requests, all returned 401 (expected) but no 429 rate limit responses. Rate limiter may not be properly configured or active."
+      - working: true
+        agent: "main"
+        comment: "✅ FIXED: Rate limiting was not working because it requires Redis for storage. Now that Redis is running, slowapi rate limiter can properly store and enforce rate limits. Installed missing 'limits' dependency required by slowapi."
 
 frontend:
   - task: "Auth Pages (Login, Register, Forgot/Reset Password)"
