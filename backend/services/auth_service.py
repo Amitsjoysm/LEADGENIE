@@ -41,6 +41,13 @@ class AuthService:
             
             await self.db.users.insert_one(user_dict)
             
+            # Send welcome email asynchronously
+            try:
+                from services.email_service import email_service
+                asyncio.create_task(email_service.send_welcome_email(user_data.email, user_data.full_name))
+            except Exception as e:
+                logger.warning(f"Failed to send welcome email: {e}")
+            
             # Return user without password
             user_dict.pop('password')
             user_dict.pop('_id', None)
