@@ -328,13 +328,17 @@ class LeadGenAPITester:
                     
                     # Check data masking for regular user
                     first_profile = profiles[0]
-                    email = first_profile.get("email", "")
-                    phone = first_profile.get("phone", "")
+                    emails = first_profile.get("emails", [])
+                    phones = first_profile.get("phones", [])
                     
-                    if "***" in email or "***" in phone:
-                        self.log_result("Profile Search - Data Masking", True, f"Data properly masked: email={email}, phone={phone}")
+                    # Check if emails/phones are masked
+                    email_masked = any("***" in email for email in emails) if emails else True
+                    phone_masked = any("***" in phone for phone in phones) if phones else True
+                    
+                    if email_masked and phone_masked:
+                        self.log_result("Profile Search - Data Masking", True, f"Data properly masked: emails={emails}, phones={phones}")
                     else:
-                        self.log_result("Profile Search - Data Masking", False, f"Data not masked: email={email}, phone={phone}")
+                        self.log_result("Profile Search - Data Masking", False, f"Data not masked: emails={emails}, phones={phones}")
                 else:
                     self.log_result("Profile Search - Basic", False, f"No profiles found: {data}")
             else:
