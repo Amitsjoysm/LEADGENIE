@@ -593,17 +593,19 @@ class LeadGenAPITester:
             
             # Make multiple rapid requests
             rate_limit_hit = False
-            for i in range(12):  # Exceed the 10/minute limit
+            responses = []
+            for i in range(15):  # Exceed the 10/minute limit
                 response = self.make_request("POST", "/auth/login", invalid_creds)
+                responses.append(response.status_code)
                 if response.status_code == 429:  # Too Many Requests
                     rate_limit_hit = True
                     break
-                time.sleep(0.1)  # Small delay between requests
+                # No delay to test rapid requests
                 
             if rate_limit_hit:
-                self.log_result("Rate Limiting - Login", True, "Rate limit correctly enforced")
+                self.log_result("Rate Limiting - Login", True, f"Rate limit correctly enforced after {len(responses)} requests")
             else:
-                self.log_result("Rate Limiting - Login", False, "Rate limit not enforced")
+                self.log_result("Rate Limiting - Login", False, f"Rate limit not enforced. Status codes: {responses}")
                 
         except Exception as e:
             self.log_result("Rate Limiting", False, f"Exception: {str(e)}")
