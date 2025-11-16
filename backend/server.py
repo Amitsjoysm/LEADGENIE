@@ -75,9 +75,6 @@ app = FastAPI(
     description="Production-ready B2B Lead Generation Platform API",
     lifespan=lifespan
 )
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
 
 # Create API router with /api prefix
 api_router = APIRouter(prefix="/api")
