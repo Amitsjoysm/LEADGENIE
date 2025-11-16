@@ -65,7 +65,14 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown complete")
 
 # Create FastAPI app
-app = FastAPI(title="LeadGen Pro API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="LeadGen Pro API",
+    version="1.0.0",
+    description="Production-ready B2B Lead Generation Platform API",
+    lifespan=lifespan
+)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Create API router with /api prefix
 api_router = APIRouter(prefix="/api")
