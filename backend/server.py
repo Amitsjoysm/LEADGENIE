@@ -1,6 +1,9 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from contextlib import asynccontextmanager
 import logging
 from typing import List, Optional, Dict, Any
@@ -35,6 +38,9 @@ logger = logging.getLogger(__name__)
 
 # Security
 security = HTTPBearer()
+
+# Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
