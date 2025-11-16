@@ -57,9 +57,34 @@ def decode_access_token(token: str) -> dict:
     except jwt.JWTError:
         return None
 
-def encrypt_data(data: str) -> str:
-    """Simple encryption for frontend data masking"""
-    return hashlib.sha256(data.encode()).hexdigest()[:16]
+def generate_reset_token() -> str:
+    """Generate secure password reset token"""
+    return secrets.token_urlsafe(32)
+
+def create_password_reset_token(email: str) -> str:
+    """Create password reset token with expiration"""
+    token = generate_reset_token()
+    return token
+
+def encrypt_sensitive_data(data: str) -> str:
+    """Encrypt sensitive data using Fernet"""
+    if not data:
+        return ""
+    try:
+        cipher = get_fernet_cipher()
+        return cipher.encrypt(data.encode()).decode()
+    except Exception:
+        return data
+
+def decrypt_sensitive_data(encrypted_data: str) -> str:
+    """Decrypt sensitive data"""
+    if not encrypted_data:
+        return ""
+    try:
+        cipher = get_fernet_cipher()
+        return cipher.decrypt(encrypted_data.encode()).decode()
+    except Exception:
+        return encrypted_data
 
 def mask_email(email: str) -> str:
     """Mask email for display"""
