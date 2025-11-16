@@ -259,13 +259,27 @@ class ProfileService:
             }
             await self.db.credit_transactions.insert_one(transaction_doc)
             
+            # Get updated user credits
+            updated_user = await self.db.users.find_one({"id": user_id}, {"credits": 1})
+            credits_remaining = updated_user.get('credits', 0) if updated_user else 0
+            
             # Get unmasked profile data
             profile = await self.get_profile_by_id(profile_id, mask_data=False)
             
             if reveal_type == 'email':
-                return {"emails": profile.emails, "credits_remaining": user['credits'] - cost}
+                return {
+                    "emails": profile.emails,
+                    "credits_remaining": credits_remaining,
+                    "credits_used": cost,
+                    "already_revealed": False
+                }
             else:
-                return {"phones": profile.phones, "credits_remaining": user['credits'] - cost}
+                return {
+                    "phones": profile.phones,
+                    "credits_remaining": credits_remaining,
+                    "credits_used": cost,
+                    "already_revealed": False
+                }
             
         except HTTPException:
             raise
