@@ -197,7 +197,7 @@ class ProfileService:
             )
     
     async def reveal_contact(self, user_id: str, profile_id: str, reveal_type: str) -> Dict[str, Any]:
-        """Reveal contact information with credit deduction"""
+        """Reveal contact information with credit deduction (atomic and race-condition safe)"""
         from config import config
         try:
             # Check if already revealed
@@ -210,35 +210,57 @@ class ProfileService:
             if existing_reveal:
                 # Already revealed - just return the data without charging
                 profile = await self.get_profile_by_id(profile_id, mask_data=False)
+                user = await self.db.users.find_one({"id": user_id}, {"credits": 1})
+                credits_remaining = user.get('credits', 0) if user else 0
+                
                 if reveal_type == 'email':
-                    return {"emails": profile.emails, "already_revealed": True}
+                    return {
+                        "emails": profile.emails,
+                        "already_revealed": True,
+                        "credits_remaining": credits_remaining,
+                        "credits_used": 0
+                    }
                 else:
-                    return {"phones": profile.phones, "already_revealed": True}
-            
-            # Get user and check credits
-            user = await self.db.users.find_one({"id": user_id})
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="User not found"
-                )
+                    return {
+                        "phones": profile.phones,
+                        "already_revealed": True,
+                        "credits_remaining": credits_remaining,
+                        "credits_used": 0
+                    }
             
             # Calculate cost
             cost = config.EMAIL_REVEAL_COST if reveal_type == 'email' else config.PHONE_REVEAL_COST
             
-            if user.get('credits', 0) < cost:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Insufficient credits. Need {cost} credits."
-                )
-            
-            # Deduct credits
-            await self.db.users.update_one(
-                {"id": user_id},
-                {"$inc": {"credits": -cost}}
+            # Atomic credit deduction - deduct credits only if user has enough
+            # This prevents race conditions by checking and updating in one atomic operation
+            updated_user = await self.db.users.find_one_and_update(
+                {
+                    "id": user_id,
+                    "credits": {"$gte": cost}  # Only update if credits >= cost
+                },
+                {
+                    "$inc": {"credits": -cost}
+                },
+                return_document=True  # Return updated document
             )
             
-            # Record reveal
+            # If no user was updated, either user doesn't exist or has insufficient credits
+            if not updated_user:
+                user = await self.db.users.find_one({"id": user_id})
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="User not found"
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Insufficient credits. Need {cost} credits, you have {user.get('credits', 0)}."
+                    )
+            
+            credits_remaining = updated_user.get('credits', 0)
+            
+            # Record reveal (after successful credit deduction)
             reveal_doc = {
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
@@ -246,22 +268,32 @@ class ProfileService:
                 "reveal_type": reveal_type,
                 "revealed_at": datetime.now(timezone.utc).isoformat()
             }
-            await self.db.revealed_contacts.insert_one(reveal_doc)
             
-            # Record credit transaction
-            transaction_doc = {
-                "id": str(uuid.uuid4()),
-                "user_id": user_id,
-                "amount": -cost,
-                "transaction_type": f"reveal_{reveal_type}",
-                "reference_id": profile_id,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await self.db.credit_transactions.insert_one(transaction_doc)
-            
-            # Get updated user credits
-            updated_user = await self.db.users.find_one({"id": user_id}, {"credits": 1})
-            credits_remaining = updated_user.get('credits', 0) if updated_user else 0
+            try:
+                await self.db.revealed_contacts.insert_one(reveal_doc)
+                
+                # Record credit transaction
+                transaction_doc = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "amount": -cost,
+                    "transaction_type": f"reveal_{reveal_type}",
+                    "reference_id": profile_id,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await self.db.credit_transactions.insert_one(transaction_doc)
+                
+            except Exception as insert_error:
+                # If reveal/transaction recording fails, rollback the credit deduction
+                logger.error(f"Failed to record reveal/transaction: {insert_error}. Rolling back credits.")
+                await self.db.users.update_one(
+                    {"id": user_id},
+                    {"$inc": {"credits": cost}}  # Refund credits
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to record reveal. Credits have been refunded."
+                )
             
             # Get unmasked profile data
             profile = await self.get_profile_by_id(profile_id, mask_data=False)
