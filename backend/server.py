@@ -448,10 +448,11 @@ async def health_check():
 app.include_router(api_router)
 
 # CORS middleware
+cors_origins = config.CORS_ORIGINS.split(',') if isinstance(config.CORS_ORIGINS, str) else ['*']
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=config.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
