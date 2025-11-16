@@ -5,6 +5,7 @@ from utils import hash_password, verify_password, create_access_token
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
