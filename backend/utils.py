@@ -1,11 +1,31 @@
 import jwt
 import hashlib
+import secrets
+import base64
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from config import config
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.backends import default_backend
 import re
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Initialize Fernet cipher for encryption
+def get_fernet_cipher():
+    """Get Fernet cipher from config encryption key"""
+    key = config.ENCRYPTION_KEY.encode()
+    kdf = PBKDF2(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=b'leadgen_salt_2025',
+        iterations=100000,
+        backend=default_backend()
+    )
+    derived_key = base64.urlsafe_b64encode(kdf.derive(key))
+    return Fernet(derived_key)
 
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""
