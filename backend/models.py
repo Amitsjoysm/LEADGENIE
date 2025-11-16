@@ -1,0 +1,196 @@
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timezone
+import uuid
+
+class PyObjectId(str):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        return str(v)
+
+# User Models
+class UserRole(str):
+    SUPER_ADMIN = 'super_admin'
+    ADMIN = 'admin'
+    USER = 'user'
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    role: str = UserRole.USER
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    full_name: str
+    role: str
+    credits: int = 0
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    credits: Optional[int] = None
+    is_active: Optional[bool] = None
+    role: Optional[str] = None
+
+# Token Models
+class Token(BaseModel):
+    access_token: str
+    token_type: str = 'bearer'
+    user: User
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+# Password Reset Models
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+# Profile Models
+class ProfileCreate(BaseModel):
+    first_name: str
+    last_name: str
+    job_title: str
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    keywords: Optional[List[str]] = []
+    seo_description: Optional[str] = None
+    company_name: str
+    company_domain: Optional[str] = None
+    profile_linkedin_url: Optional[str] = None
+    company_linkedin_url: Optional[str] = None
+    emails: List[str] = []
+    phones: List[str] = []
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class Profile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    first_name: str
+    last_name: str
+    job_title: str
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    keywords: List[str] = []
+    seo_description: Optional[str] = None
+    company_name: str
+    company_domain: Optional[str] = None
+    profile_linkedin_url: Optional[str] = None
+    company_linkedin_url: Optional[str] = None
+    emails: List[str] = []
+    phones: List[str] = []
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Company Models
+class CompanyCreate(BaseModel):
+    name: str
+    domain: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class Company(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    domain: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Filter Models
+class ProfileFilter(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    job_title: Optional[str] = None
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    company_name: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    page: int = 1
+    page_size: int = 20
+
+class CompanyFilter(BaseModel):
+    name: Optional[str] = None
+    industry: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    page: int = 1
+    page_size: int = 20
+
+# Reveal Request Models
+class RevealRequest(BaseModel):
+    profile_id: str
+    reveal_type: str  # 'email' or 'phone'
+
+# Plan Models
+class PlanCreate(BaseModel):
+    name: str
+    credits: int
+    price: float
+    duration_days: int
+    features: List[str] = []
+
+class Plan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    credits: int
+    price: float
+    duration_days: int
+    features: List[str] = []
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Bulk Upload Models
+class BulkUploadRequest(BaseModel):
+    field_mapping: Dict[str, str]  # CSV column -> model field
+    validations: Optional[Dict[str, Any]] = {}
+
+class BulkUploadStatus(BaseModel):
+    task_id: str
+    status: str
+    total_rows: int = 0
+    processed_rows: int = 0
+    success_count: int = 0
+    error_count: int = 0
+    errors: List[Dict[str, Any]] = []
