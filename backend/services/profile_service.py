@@ -195,5 +195,85 @@ class ProfileService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to delete profile"
             )
+    
+    async def reveal_contact(self, user_id: str, profile_id: str, reveal_type: str) -> Dict[str, Any]:
+        """Reveal contact information with credit deduction"""
+        from config import config
+        try:
+            # Check if already revealed
+            existing_reveal = await self.db.revealed_contacts.find_one({
+                "user_id": user_id,
+                "profile_id": profile_id,
+                "reveal_type": reveal_type
+            })
+            
+            if existing_reveal:
+                # Already revealed - just return the data without charging
+                profile = await self.get_profile_by_id(profile_id, mask_data=False)
+                if reveal_type == 'email':
+                    return {"emails": profile.emails, "already_revealed": True}
+                else:
+                    return {"phones": profile.phones, "already_revealed": True}
+            
+            # Get user and check credits
+            user = await self.db.users.find_one({"id": user_id})
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
+                )
+            
+            # Calculate cost
+            cost = config.EMAIL_REVEAL_COST if reveal_type == 'email' else config.PHONE_REVEAL_COST
+            
+            if user.get('credits', 0) < cost:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Insufficient credits. Need {cost} credits."
+                )
+            
+            # Deduct credits
+            await self.db.users.update_one(
+                {"id": user_id},
+                {"$inc": {"credits": -cost}}
+            )
+            
+            # Record reveal
+            reveal_doc = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "profile_id": profile_id,
+                "reveal_type": reveal_type,
+                "revealed_at": datetime.now(timezone.utc).isoformat()
+            }
+            await self.db.revealed_contacts.insert_one(reveal_doc)
+            
+            # Record credit transaction
+            transaction_doc = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "amount": -cost,
+                "transaction_type": f"reveal_{reveal_type}",
+                "reference_id": profile_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await self.db.credit_transactions.insert_one(transaction_doc)
+            
+            # Get unmasked profile data
+            profile = await self.get_profile_by_id(profile_id, mask_data=False)
+            
+            if reveal_type == 'email':
+                return {"emails": profile.emails, "credits_remaining": user['credits'] - cost}
+            else:
+                return {"phones": profile.phones, "credits_remaining": user['credits'] - cost}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Reveal contact error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to reveal contact"
+            )
 
 profile_service = ProfileService()
