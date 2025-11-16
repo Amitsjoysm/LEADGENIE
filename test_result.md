@@ -366,14 +366,15 @@ metadata:
 
 test_plan:
   current_focus:
-    - "JWT Authentication"
-    - "Password Reset/Forgot Password"
     - "Credit-based Contact Reveal"
-    - "Profile Search with Filters"
-    - "Bulk Upload"
-  stuck_tasks: []
+    - "Bulk Upload with Celery"
+    - "Rate Limiting"
+  stuck_tasks:
+    - "Credit-based Contact Reveal"
+    - "Bulk Upload with Celery"
+    - "Rate Limiting"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
