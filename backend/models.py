@@ -194,3 +194,61 @@ class BulkUploadStatus(BaseModel):
     success_count: int = 0
     error_count: int = 0
     errors: List[Dict[str, Any]] = []
+
+# Revealed Contact Models (for unique reveal tracking)
+class RevealedContact(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    profile_id: str
+    reveal_type: str  # 'email' or 'phone'
+    revealed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Credit Transaction Models
+class CreditTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    amount: int  # negative for deduction, positive for addition
+    transaction_type: str  # 'reveal_email', 'reveal_phone', 'purchase', 'admin_adjustment'
+    reference_id: Optional[str] = None  # profile_id for reveals
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Profile/Company Update Models
+class ProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    job_title: Optional[str] = None
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    seo_description: Optional[str] = None
+    company_name: Optional[str] = None
+    company_domain: Optional[str] = None
+    profile_linkedin_url: Optional[str] = None
+    company_linkedin_url: Optional[str] = None
+    emails: Optional[List[str]] = None
+    phones: Optional[List[str]] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class CompanyUpdate(BaseModel):
+    name: Optional[str] = None
+    domain: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class PlanUpdate(BaseModel):
+    name: Optional[str] = None
+    credits: Optional[int] = None
+    price: Optional[float] = None
+    duration_days: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
