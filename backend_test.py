@@ -629,14 +629,14 @@ class LeadGenAPITester:
                 
                 if profiles:
                     profile = profiles[0]
-                    email = profile.get("email", "")
-                    phone = profile.get("phone", "")
+                    emails = profile.get("emails", [])
+                    phones = profile.get("phones", [])
                     
                     # Admin should see unmasked data
-                    if email and "***" not in email and "@" in email:
-                        self.log_result("Admin Data Visibility", True, f"Admin sees unmasked data: {email}")
+                    if emails and any("@" in email and "***" not in email for email in emails):
+                        self.log_result("Admin Data Visibility", True, f"Admin sees unmasked data: {emails}")
                     else:
-                        self.log_result("Admin Data Visibility", False, f"Admin data still masked: {email}")
+                        self.log_result("Admin Data Visibility", False, f"Admin data still masked: {emails}")
                 else:
                     self.log_result("Admin Data Visibility", False, "No profiles to test")
             else:
