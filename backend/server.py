@@ -39,12 +39,7 @@ logger = logging.getLogger(__name__)
 # Security
 security = HTTPBearer()
 
-# Rate Limiter with Redis storage
-from slowapi.middleware import SlowAPIMiddleware
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=config.REDIS_URL
-)
+# Rate Limiter will be initialized in lifespan
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
