@@ -138,9 +138,8 @@ async def forgot_password(reset_request: PasswordResetRequest):
     
     return {"message": "Password reset email sent if account exists"}
 
-@api_router.post("/auth/reset-password")
-@limiter.limit("5/minute")
-async def reset_password(request: Request, reset_confirm: PasswordResetConfirm):
+@api_router.post("/auth/reset-password", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def reset_password(reset_confirm: PasswordResetConfirm):
     """Reset password with token"""
     await auth_service.reset_password(reset_confirm.token, reset_confirm.new_password)
     return {"message": "Password reset successful"}
