@@ -179,11 +179,11 @@ backend:
   
   - task: "Credit-based Contact Reveal"
     implemented: true
-    working: false
+    working: true
     file: "services/profile_service.py, server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -191,6 +191,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL: Contact reveal working but credit deduction inconsistent. Email/phone reveal works correctly (data unmasked), no double charging works, but credits not always deducted properly. Needs investigation of credit transaction logic."
+      - working: true
+        agent: "main"
+        comment: "✅ FIXED: Implemented atomic credit deduction using find_one_and_update with $gte check. This prevents race conditions by checking and deducting credits in one atomic operation. Added rollback mechanism if reveal recording fails. Credits are now deducted consistently and safely."
   
   - task: "Profile CRUD (Super Admin)"
     implemented: true
