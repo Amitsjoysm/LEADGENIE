@@ -183,7 +183,7 @@ backend:
     file: "services/profile_service.py, server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -194,6 +194,9 @@ backend:
       - working: true
         agent: "main"
         comment: "✅ FIXED: Implemented atomic credit deduction using find_one_and_update with $gte check. This prevents race conditions by checking and deducting credits in one atomic operation. Added rollback mechanism if reveal recording fails. Credits are now deducted consistently and safely."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Atomic credit deduction working perfectly. Email reveal costs 1 credit (46->45), phone reveal costs 3 credits. No double charging - already revealed contacts return 'already_revealed: true' with 'credits_used: 0'. Database shows proper credit_transactions records. Concurrent requests handled atomically."
   
   - task: "Profile CRUD (Super Admin)"
     implemented: true
