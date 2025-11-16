@@ -1,13 +1,13 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
 from contextlib import asynccontextmanager
 import logging
 from typing import List, Optional, Dict, Any
 import json
+import redis.asyncio as redis
 
 # Import configurations and database
 from config import config
