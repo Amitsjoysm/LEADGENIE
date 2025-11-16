@@ -113,9 +113,8 @@ async def require_super_admin(current_user: User = Depends(get_current_user)) ->
 
 # ========== AUTH ENDPOINTS ==========
 
-@api_router.post("/auth/register", response_model=User)
-@limiter.limit("5/minute")
-async def register(request: Request, user_data: UserCreate):
+@api_router.post("/auth/register", response_model=User, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def register(user_data: UserCreate):
     """Register a new user"""
     return await auth_service.register_user(user_data)
 
