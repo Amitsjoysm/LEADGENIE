@@ -242,11 +242,11 @@ backend:
   
   - task: "Bulk Upload with Celery"
     implemented: true
-    working: false
+    working: true
     file: "tasks.py, server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -254,6 +254,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ Bulk upload status endpoint fails with 500 error due to Redis connection issue (Redis not running). Endpoint exists but requires Redis for Celery task status checking."
+      - working: true
+        agent: "main"
+        comment: "✅ FIXED: Installed Redis server and configured it to run via supervisor. Created supervisor configs for both Redis and Celery worker. Both services now running properly. Redis on port 6379, Celery worker with 4 concurrent workers."
   
   - task: "Data Masking (emails, phones, domains)"
     implemented: true
