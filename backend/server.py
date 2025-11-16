@@ -55,11 +55,16 @@ async def lifespan(app: FastAPI):
     company_service.set_db(db)
     plan_service.set_db(db)
     
+    # Initialize FastAPI Limiter with Redis
+    redis_conn = redis.from_url(config.REDIS_URL, encoding="utf8")
+    await FastAPILimiter.init(redis_conn)
+    
     logger.info("Application started successfully")
     
     yield
     
     # Shutdown
+    await FastAPILimiter.close()
     await close_db()
     logger.info("Application shutdown complete")
 
