@@ -128,9 +128,8 @@ async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return current_user
 
-@api_router.post("/auth/forgot-password")
-@limiter.limit("3/minute")
-async def forgot_password(request: Request, reset_request: PasswordResetRequest):
+@api_router.post("/auth/forgot-password", dependencies=[Depends(RateLimiter(times=3, seconds=60))])
+async def forgot_password(reset_request: PasswordResetRequest):
     """Request password reset"""
     token = await auth_service.create_password_reset_token(reset_request.email)
     
