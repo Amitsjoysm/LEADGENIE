@@ -129,19 +129,21 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @api_router.post("/auth/forgot-password")
-async def forgot_password(request: PasswordResetRequest):
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, reset_request: PasswordResetRequest):
     """Request password reset"""
-    token = await auth_service.create_password_reset_token(request.email)
+    token = await auth_service.create_password_reset_token(reset_request.email)
     
     # Send email (async task)
-    await email_service.send_password_reset_email(request.email, token)
+    await email_service.send_password_reset_email(reset_request.email, token)
     
     return {"message": "Password reset email sent if account exists"}
 
 @api_router.post("/auth/reset-password")
-async def reset_password(request: PasswordResetConfirm):
+@limiter.limit("5/minute")
+async def reset_password(request: Request, reset_confirm: PasswordResetConfirm):
     """Reset password with token"""
-    await auth_service.reset_password(request.token, request.new_password)
+    await auth_service.reset_password(reset_confirm.token, reset_confirm.new_password)
     return {"message": "Password reset successful"}
 
 # ========== USER ENDPOINTS ==========
