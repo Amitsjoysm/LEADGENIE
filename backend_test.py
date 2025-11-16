@@ -440,17 +440,17 @@ class LeadGenAPITester:
             if me_response.status_code == 200:
                 current_credits = me_response.json().get("credits", 0)
                 if current_credits >= 3:
-                    reveal_data = {"reveal_type": "phone"}
+                    reveal_data = {"profile_id": profile_id, "reveal_type": "phone"}
                     response = self.make_request("POST", f"/profiles/{profile_id}/reveal", reveal_data, headers=headers)
                     
                     if response.status_code == 200:
                         reveal_result = response.json()
-                        revealed_phone = reveal_result.get("phone")
+                        revealed_phones = reveal_result.get("phones", [])
                         
-                        if revealed_phone and "***" not in revealed_phone:
-                            self.log_result("Profile Reveal - Phone", True, f"Phone revealed: {revealed_phone}")
+                        if revealed_phones and any("***" not in phone for phone in revealed_phones):
+                            self.log_result("Profile Reveal - Phone", True, f"Phone revealed: {revealed_phones}")
                         else:
-                            self.log_result("Profile Reveal - Phone", False, f"Phone not properly revealed: {revealed_phone}")
+                            self.log_result("Profile Reveal - Phone", False, f"Phone not properly revealed: {revealed_phones}")
                     else:
                         self.log_result("Profile Reveal - Phone", False, f"Status: {response.status_code}")
                 else:
