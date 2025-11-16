@@ -383,10 +383,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Credit-based Contact Reveal"
-    - "Bulk Upload with Celery"
-    - "Rate Limiting"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
