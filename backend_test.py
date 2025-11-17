@@ -598,7 +598,7 @@ class LeadGenAPITester:
     # ========== COMPANY TESTS ==========
     
     def test_company_search(self):
-        """Test company search"""
+        """Test company search with 1000 companies"""
         if not self.user_token:
             self.log_result("Company Search", False, "No user token available")
             return
@@ -608,8 +608,8 @@ class LeadGenAPITester:
             
             # Test basic company search
             search_filters = {
-                "skip": 0,
-                "limit": 10
+                "page": 1,
+                "page_size": 10
             }
             
             response = self.make_request("POST", "/companies/search", search_filters, headers=headers)
@@ -618,10 +618,27 @@ class LeadGenAPITester:
                 companies = data.get("companies", [])
                 total = data.get("total", 0)
                 
-                if companies:
-                    self.log_result("Company Search", True, f"Found {len(companies)} companies (total: {total})")
+                if companies and total >= 1000:
+                    self.log_result("Company Search - 1000 Companies", True, f"Found {len(companies)} companies (total: {total})")
+                elif companies:
+                    self.log_result("Company Search - 1000 Companies", False, f"Expected 1000+ companies, got {total}")
                 else:
-                    self.log_result("Company Search", False, f"No companies found: {data}")
+                    self.log_result("Company Search - 1000 Companies", False, f"No companies found: {data}")
+                    
+                # Test with name filter
+                filtered_search = {
+                    "page": 1,
+                    "page_size": 5,
+                    "name": "Tech"
+                }
+                
+                response = self.make_request("POST", "/companies/search", filtered_search, headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    companies = data.get("companies", [])
+                    self.log_result("Company Search - Name Filter", True, f"Name filter returned {len(companies)} companies")
+                else:
+                    self.log_result("Company Search - Name Filter", False, f"Status: {response.status_code}")
             else:
                 self.log_result("Company Search", False, f"Status: {response.status_code}")
                 
