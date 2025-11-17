@@ -261,7 +261,7 @@ async def add_credits(
 ):
     """Add or deduct credits from user (super admin only)"""
     try:
-        user = user_service.add_credits(user_id, request.amount)
+        user = await user_service.add_credits(user_id, request.amount)
         return user
     except ValueError as e:
         raise HTTPException(
