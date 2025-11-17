@@ -282,12 +282,40 @@ async def search_profiles(
 ):
     """Search profiles with filters"""
     is_admin = current_user.role == "super_admin"
-    # Create ProfileFilter object
+    # Create ProfileFilter object with field mapping
     filter_data = request.dict(exclude={'page', 'page_size'})
+    
+    # Map fields from ProfileSearchRequest to ProfileFilter
+    mapped_data = {}
+    if filter_data.get('name'):
+        # Split name into first_name and last_name if provided
+        name_parts = filter_data['name'].split(' ', 1)
+        mapped_data['first_name'] = name_parts[0]
+        if len(name_parts) > 1:
+            mapped_data['last_name'] = name_parts[1]
+    
+    # Map other fields
+    field_mapping = {
+        'job_title': 'job_title',
+        'company_name': 'company_name', 
+        'industry': 'industry',
+        'location': 'city',  # Map location to city
+        'keywords': 'keywords',
+        'experience_years_min': 'experience_years_min',
+        'experience_years_max': 'experience_years_max',
+        'company_size': 'company_size',
+        'revenue_range': 'revenue_range',
+        'skills': 'skills'
+    }
+    
+    for search_field, filter_field in field_mapping.items():
+        if filter_data.get(search_field) is not None:
+            mapped_data[filter_field] = filter_data[search_field]
+    
     profile_filter = ProfileFilter(
         page=request.page,
         page_size=request.page_size,
-        **filter_data
+        **mapped_data
     )
     results = await profile_service.get_profiles(
         filters=profile_filter,
