@@ -136,6 +136,9 @@ async def register(request: RegisterRequest):
         )
         result = await auth_service.register_user(user_create)
         return result
+    except HTTPException:
+        # Re-raise HTTPException with correct status code
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
