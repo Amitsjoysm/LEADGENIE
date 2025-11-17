@@ -18,10 +18,10 @@ class LeadGenAPITester:
         self.user_token = None
         self.test_results = {}
         
-        # Test credentials
+        # Test credentials from review request
         self.admin_creds = {
-            "email": "admin@leadgenpro.com",
-            "password": "Admin123!"
+            "email": "admin@leadgen.com",
+            "password": "admin123"
         }
         self.user_creds = {
             "email": "user1@example.com", 
