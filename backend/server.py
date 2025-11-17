@@ -496,12 +496,7 @@ async def get_plans(
 @api_router.get("/plans/{plan_id}")
 async def get_plan(plan_id: str):
     """Get plan by ID (public)"""
-    plan = plan_service.get_plan_by_id(plan_id)
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Plan not found"
-        )
+    plan = await plan_service.get_plan_by_id(plan_id)
     return plan
 
 @api_router.post("/plans")
