@@ -758,21 +758,31 @@ class LeadGenAPITester:
         try:
             headers = self.get_auth_headers(self.admin_token)
             
+            # Test the specific endpoint mentioned in review request
+            test_task_id = "test-task-id"
+            response = self.make_request("GET", f"/bulk-upload/{test_task_id}", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") in ["pending", "processing", "completed", "failed"]:
+                    self.log_result("Bulk Upload Status - Test Task", True, f"Status endpoint working: {data.get('status')}")
+                else:
+                    self.log_result("Bulk Upload Status - Test Task", False, f"Unexpected status: {data}")
+            else:
+                self.log_result("Bulk Upload Status - Test Task", False, f"Status: {response.status_code}, Response: {response.text}")
+            
             # Test getting status of non-existent task
             fake_task_id = str(uuid.uuid4())
             response = self.make_request("GET", f"/bulk-upload/{fake_task_id}", headers=headers)
             
-            if response.status_code == 500:
-                # Expected due to Redis not running
-                self.log_result("Bulk Upload Status", True, "Endpoint exists but Redis not available (expected)")
-            elif response.status_code == 200:
+            if response.status_code == 200:
                 data = response.json()
                 if data.get("status") in ["pending", "failed"]:
-                    self.log_result("Bulk Upload Status", True, f"Status endpoint working: {data.get('status')}")
+                    self.log_result("Bulk Upload Status - Random Task", True, f"Status endpoint working: {data.get('status')}")
                 else:
-                    self.log_result("Bulk Upload Status", False, f"Unexpected status: {data}")
+                    self.log_result("Bulk Upload Status - Random Task", False, f"Unexpected status: {data}")
             else:
-                self.log_result("Bulk Upload Status", False, f"Status: {response.status_code}")
+                self.log_result("Bulk Upload Status - Random Task", False, f"Status: {response.status_code}")
                 
         except Exception as e:
             self.log_result("Bulk Upload", False, f"Exception: {str(e)}")
