@@ -275,7 +275,7 @@ class ProductionReadinessTest:
             self.log_result("Phone Reveal - Insufficient Credits", True, f"User has {current_credits} credits (need 3)")
             
         # Test revealing same contact again (should be free - no double charging)
-        reveal_data = {"reveal_type": "email"}
+        reveal_data = {"profile_id": profile_id, "reveal_type": "email"}
         response = self.make_request("POST", f"/profiles/{profile_id}/reveal", reveal_data, headers=headers)
         
         if response.status_code == 200:
