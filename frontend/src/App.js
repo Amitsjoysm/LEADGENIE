@@ -115,6 +115,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/admin/bulk-upload"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <BulkUploadPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Default Route */}
               <Route path="/" element={<Navigate to="/login" replace />} />
