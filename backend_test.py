@@ -871,10 +871,324 @@ class LeadGenAPITester:
         except Exception as e:
             self.log_result("Admin Data Visibility", False, f"Exception: {str(e)}")
     
+    # ========== HIERARCHICAL RELATIONSHIPS & UNIQUENESS TESTS ==========
+    
+    def test_profile_company_hierarchical_relationship(self):
+        """Test Profile-Company hierarchical relationship"""
+        if not self.admin_token:
+            self.log_result("Profile-Company Hierarchical Relationship", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # First get a profile to verify it has company_id
+            search_filters = {"page": 1, "page_size": 1}
+            response = self.make_request("POST", "/profiles/search", search_filters, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                
+                if profiles:
+                    profile = profiles[0]
+                    profile_id = profile.get("id")
+                    company_id = profile.get("company_id")
+                    company_name = profile.get("company_name")
+                    company_domain = profile.get("company_domain")
+                    
+                    if company_id:
+                        self.log_result("Profile Has Company ID", True, f"Profile {profile_id} has company_id: {company_id}")
+                        
+                        # Now fetch the company using company_id
+                        response = self.make_request("GET", f"/companies/{company_id}", headers=headers)
+                        if response.status_code == 200:
+                            company = response.json()
+                            company_fetched_name = company.get("name")
+                            company_fetched_domain = company.get("domain")
+                            
+                            # Verify company data matches profile data
+                            if (company_fetched_name == company_name and 
+                                company_fetched_domain == company_domain):
+                                self.log_result("Profile-Company Data Match", True, 
+                                              f"Company data matches: name={company_name}, domain={company_domain}")
+                            else:
+                                self.log_result("Profile-Company Data Match", False, 
+                                              f"Data mismatch - Profile: {company_name}/{company_domain}, Company: {company_fetched_name}/{company_fetched_domain}")
+                        else:
+                            self.log_result("Fetch Company by ID", False, f"Could not fetch company {company_id}: {response.status_code}")
+                    else:
+                        self.log_result("Profile Has Company ID", False, "Profile missing company_id field")
+                else:
+                    self.log_result("Profile-Company Hierarchical Relationship", False, "No profiles available for testing")
+            else:
+                self.log_result("Profile-Company Hierarchical Relationship", False, f"Could not search profiles: {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("Profile-Company Hierarchical Relationship", False, f"Exception: {str(e)}")
+    
+    def test_email_uniqueness_constraint(self):
+        """Test email uniqueness constraint"""
+        if not self.admin_token:
+            self.log_result("Email Uniqueness Constraint", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # Create a profile with unique email
+            unique_email = f"unique_{uuid.uuid4().hex[:8]}@testcompany.com"
+            profile_data = {
+                "first_name": "Test",
+                "last_name": "User",
+                "job_title": "Software Engineer",
+                "company_name": "Test Company",
+                "company_domain": f"testcompany{uuid.uuid4().hex[:8]}.com",
+                "emails": [unique_email],
+                "phones": ["+1-555-123-4567"],
+                "city": "San Francisco",
+                "state": "CA",
+                "country": "USA"
+            }
+            
+            response = self.make_request("POST", "/profiles", profile_data, headers=headers)
+            if response.status_code == 200:
+                created_profile = response.json()
+                self.log_result("Create Profile with Unique Email", True, f"Profile created with email: {unique_email}")
+                
+                # Now try to create another profile with the same email (should fail)
+                duplicate_profile_data = {
+                    "first_name": "Another",
+                    "last_name": "User", 
+                    "job_title": "Manager",
+                    "company_name": "Another Company",
+                    "company_domain": f"anothercompany{uuid.uuid4().hex[:8]}.com",
+                    "emails": [unique_email],  # Same email
+                    "phones": ["+1-555-987-6543"],
+                    "city": "New York",
+                    "state": "NY",
+                    "country": "USA"
+                }
+                
+                response = self.make_request("POST", "/profiles", duplicate_profile_data, headers=headers)
+                if response.status_code == 400:
+                    error_message = response.json().get("detail", "")
+                    if "already registered" in error_message.lower():
+                        self.log_result("Email Uniqueness Constraint", True, f"Duplicate email correctly rejected: {error_message}")
+                    else:
+                        self.log_result("Email Uniqueness Constraint", False, f"Wrong error message: {error_message}")
+                else:
+                    self.log_result("Email Uniqueness Constraint", False, f"Should reject duplicate email, got: {response.status_code}")
+            else:
+                self.log_result("Email Uniqueness Constraint", False, f"Could not create initial profile: {response.status_code}, {response.text}")
+                
+        except Exception as e:
+            self.log_result("Email Uniqueness Constraint", False, f"Exception: {str(e)}")
+    
+    def test_company_domain_uniqueness_constraint(self):
+        """Test company domain uniqueness constraint"""
+        if not self.admin_token:
+            self.log_result("Company Domain Uniqueness Constraint", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # Create a company with unique domain
+            unique_domain = f"uniquecompany{uuid.uuid4().hex[:8]}.com"
+            company_data = {
+                "name": "Unique Test Company",
+                "domain": unique_domain,
+                "industry": "Technology",
+                "employee_size": "100-500",
+                "revenue": "$10M-$50M",
+                "city": "San Francisco",
+                "state": "CA",
+                "country": "USA"
+            }
+            
+            response = self.make_request("POST", "/companies", company_data, headers=headers)
+            if response.status_code == 200:
+                created_company = response.json()
+                self.log_result("Create Company with Unique Domain", True, f"Company created with domain: {unique_domain}")
+                
+                # Now try to create another company with the same domain (should fail)
+                duplicate_company_data = {
+                    "name": "Another Test Company",
+                    "domain": unique_domain,  # Same domain
+                    "industry": "Finance",
+                    "employee_size": "50-100",
+                    "revenue": "$5M-$10M",
+                    "city": "New York",
+                    "state": "NY",
+                    "country": "USA"
+                }
+                
+                response = self.make_request("POST", "/companies", duplicate_company_data, headers=headers)
+                if response.status_code == 400:
+                    error_message = response.json().get("detail", "")
+                    if "already exists" in error_message.lower():
+                        self.log_result("Company Domain Uniqueness Constraint", True, f"Duplicate domain correctly rejected: {error_message}")
+                    else:
+                        self.log_result("Company Domain Uniqueness Constraint", False, f"Wrong error message: {error_message}")
+                else:
+                    self.log_result("Company Domain Uniqueness Constraint", False, f"Should reject duplicate domain, got: {response.status_code}")
+            else:
+                self.log_result("Company Domain Uniqueness Constraint", False, f"Could not create initial company: {response.status_code}, {response.text}")
+                
+        except Exception as e:
+            self.log_result("Company Domain Uniqueness Constraint", False, f"Exception: {str(e)}")
+    
+    def test_auto_company_creation_from_profile(self):
+        """Test auto company creation when creating profile with new domain"""
+        if not self.admin_token:
+            self.log_result("Auto Company Creation from Profile", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # Create profile with a completely new company domain
+            new_domain = f"newcompany{uuid.uuid4().hex[:8]}.com"
+            new_company_name = "Auto Created Company"
+            
+            profile_data = {
+                "first_name": "Auto",
+                "last_name": "Test",
+                "job_title": "CEO",
+                "company_name": new_company_name,
+                "company_domain": new_domain,
+                "emails": [f"auto.test{uuid.uuid4().hex[:8]}@{new_domain}"],
+                "phones": ["+1-555-111-2222"],
+                "city": "Austin",
+                "state": "TX",
+                "country": "USA"
+            }
+            
+            response = self.make_request("POST", "/profiles", profile_data, headers=headers)
+            if response.status_code == 200:
+                created_profile = response.json()
+                company_id = created_profile.get("company_id")
+                
+                if company_id:
+                    self.log_result("Profile Created with Auto Company", True, f"Profile created with auto-generated company_id: {company_id}")
+                    
+                    # Verify the company was actually created
+                    response = self.make_request("GET", f"/companies/{company_id}", headers=headers)
+                    if response.status_code == 200:
+                        auto_created_company = response.json()
+                        if (auto_created_company.get("name") == new_company_name and 
+                            auto_created_company.get("domain") == new_domain):
+                            self.log_result("Auto Company Creation from Profile", True, 
+                                          f"Company auto-created successfully: {new_company_name} ({new_domain})")
+                        else:
+                            self.log_result("Auto Company Creation from Profile", False, 
+                                          f"Auto-created company data mismatch: {auto_created_company}")
+                    else:
+                        self.log_result("Auto Company Creation from Profile", False, 
+                                      f"Auto-created company not found: {response.status_code}")
+                else:
+                    self.log_result("Auto Company Creation from Profile", False, "Profile created without company_id")
+            else:
+                self.log_result("Auto Company Creation from Profile", False, 
+                              f"Could not create profile: {response.status_code}, {response.text}")
+                
+        except Exception as e:
+            self.log_result("Auto Company Creation from Profile", False, f"Exception: {str(e)}")
+    
+    def test_existing_company_linkage(self):
+        """Test profile linking to existing company by domain"""
+        if not self.admin_token:
+            self.log_result("Existing Company Linkage", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # First, get an existing company domain from the database
+            search_filters = {"page": 1, "page_size": 1}
+            response = self.make_request("POST", "/companies/search", search_filters, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                companies = data.get("companies", [])
+                
+                if companies:
+                    existing_company = companies[0]
+                    existing_domain = existing_company.get("domain")
+                    existing_company_id = existing_company.get("id")
+                    existing_company_name = existing_company.get("name")
+                    
+                    # Create a new profile with the existing company domain
+                    profile_data = {
+                        "first_name": "Existing",
+                        "last_name": "Company",
+                        "job_title": "Developer",
+                        "company_name": existing_company_name,
+                        "company_domain": existing_domain,  # Use existing domain
+                        "emails": [f"existing.company{uuid.uuid4().hex[:8]}@{existing_domain}"],
+                        "phones": ["+1-555-333-4444"],
+                        "city": "Seattle",
+                        "state": "WA",
+                        "country": "USA"
+                    }
+                    
+                    response = self.make_request("POST", "/profiles", profile_data, headers=headers)
+                    if response.status_code == 200:
+                        created_profile = response.json()
+                        profile_company_id = created_profile.get("company_id")
+                        
+                        if profile_company_id == existing_company_id:
+                            self.log_result("Existing Company Linkage", True, 
+                                          f"Profile correctly linked to existing company: {existing_company_id}")
+                            
+                            # Verify multiple profiles can belong to same company
+                            # Create another profile with same domain
+                            profile_data2 = {
+                                "first_name": "Another",
+                                "last_name": "Employee",
+                                "job_title": "Manager",
+                                "company_name": existing_company_name,
+                                "company_domain": existing_domain,
+                                "emails": [f"another.employee{uuid.uuid4().hex[:8]}@{existing_domain}"],
+                                "phones": ["+1-555-555-6666"],
+                                "city": "Portland",
+                                "state": "OR",
+                                "country": "USA"
+                            }
+                            
+                            response = self.make_request("POST", "/profiles", profile_data2, headers=headers)
+                            if response.status_code == 200:
+                                created_profile2 = response.json()
+                                profile2_company_id = created_profile2.get("company_id")
+                                
+                                if profile2_company_id == existing_company_id:
+                                    self.log_result("Multiple Profiles Same Company", True, 
+                                                  f"Multiple profiles linked to same company: {existing_company_id}")
+                                else:
+                                    self.log_result("Multiple Profiles Same Company", False, 
+                                                  f"Second profile linked to different company: {profile2_company_id}")
+                            else:
+                                self.log_result("Multiple Profiles Same Company", False, 
+                                              f"Could not create second profile: {response.status_code}")
+                        else:
+                            self.log_result("Existing Company Linkage", False, 
+                                          f"Profile linked to wrong company: expected {existing_company_id}, got {profile_company_id}")
+                    else:
+                        self.log_result("Existing Company Linkage", False, 
+                                      f"Could not create profile: {response.status_code}, {response.text}")
+                else:
+                    self.log_result("Existing Company Linkage", False, "No existing companies found for testing")
+            else:
+                self.log_result("Existing Company Linkage", False, f"Could not search companies: {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("Existing Company Linkage", False, f"Exception: {str(e)}")
+
     def run_all_tests(self):
         """Run all tests in order"""
-        print("🚀 Starting LeadGen Pro Backend API Tests")
-        print("=" * 60)
+        print("🚀 Starting LeadGen Pro Backend API Tests - HIERARCHICAL RELATIONSHIPS & UNIQUENESS")
+        print("=" * 80)
         
         # Health checks first
         self.test_health_check()
@@ -888,6 +1202,15 @@ class LeadGenAPITester:
         # User management tests
         self.test_user_management()
         self.test_credit_management()
+        
+        # NEW: Hierarchical Relationships & Uniqueness Tests
+        print("\n🔗 TESTING HIERARCHICAL RELATIONSHIPS & UNIQUENESS CONSTRAINTS")
+        print("-" * 80)
+        self.test_profile_company_hierarchical_relationship()
+        self.test_email_uniqueness_constraint()
+        self.test_company_domain_uniqueness_constraint()
+        self.test_auto_company_creation_from_profile()
+        self.test_existing_company_linkage()
         
         # Profile tests (most important)
         self.test_profile_search()
@@ -911,9 +1234,9 @@ class LeadGenAPITester:
         # Rate limiting tests
         self.test_rate_limiting()
         
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 80)
         print("📊 TEST SUMMARY")
-        print("=" * 60)
+        print("=" * 80)
         
         passed = sum(1 for result in self.test_results.values() if result["success"])
         total = len(self.test_results)
