@@ -20,8 +20,8 @@ class LeadGenAPITester:
         
         # Test credentials
         self.admin_creds = {
-            "email": "admin@leadgen.com",
-            "password": "admin123"
+            "email": "admin@leadgenpro.com",
+            "password": "Admin123!"
         }
         self.user_creds = {
             "email": "user1@example.com", 
