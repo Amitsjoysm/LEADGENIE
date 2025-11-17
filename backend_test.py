@@ -861,6 +861,7 @@ class LeadGenAPITester:
         
         # Profile tests (most important)
         self.test_profile_search()
+        self.test_profile_search_new_filters()
         self.test_profile_reveal()
         self.test_profile_get_by_id()
         
@@ -871,6 +872,7 @@ class LeadGenAPITester:
         self.test_plans()
         
         # Bulk upload tests
+        self.test_bulk_upload_template_downloads()
         self.test_bulk_upload_endpoints()
         
         # Admin-specific tests
