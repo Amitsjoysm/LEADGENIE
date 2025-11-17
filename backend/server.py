@@ -152,7 +152,12 @@ async def register(request: RegisterRequest):
 async def login(request: LoginRequest):
     """Login user"""
     try:
-        result = auth_service.login_user(request.email, request.password)
+        # Create UserLogin object
+        user_login = UserLogin(
+            email=request.email,
+            password=request.password
+        )
+        result = await auth_service.login_user(user_login)
         return result
     except ValueError as e:
         raise HTTPException(
