@@ -460,6 +460,9 @@ async def create_company(
         company_create = CompanyCreate(**request.dict())
         company = await company_service.create_company(company_create)
         return company
+    except HTTPException:
+        # Re-raise HTTPException with correct status code
+        raise
     except Exception as e:
         logger.error(f"Create company error: {e}")
         raise HTTPException(
