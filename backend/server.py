@@ -219,12 +219,7 @@ async def get_user(
     current_user: User = Depends(require_super_admin)
 ):
     """Get user by ID (super admin only)"""
-    user = user_service.get_user_by_id(user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+    user = await user_service.get_user_by_id(user_id)
     return user
 
 @api_router.put("/users/{user_id}")
