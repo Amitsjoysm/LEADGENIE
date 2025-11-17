@@ -414,11 +414,14 @@ async def search_companies(
     current_user: User = Depends(get_current_user)
 ):
     """Search companies with filters"""
-    results = company_service.search_companies(
-        filters=request.dict(exclude={'page', 'page_size'}),
+    # Create CompanyFilter object
+    from models import CompanyFilter
+    company_filter = CompanyFilter(
         page=request.page,
-        page_size=request.page_size
+        page_size=request.page_size,
+        **request.dict(exclude={'page', 'page_size'})
     )
+    results = await company_service.get_companies(company_filter)
     return results
 
 @api_router.get("/companies/{company_id}")
