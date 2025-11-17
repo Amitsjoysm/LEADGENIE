@@ -8,7 +8,7 @@ import json
 
 def debug_reveal():
     """Debug the credit reveal process"""
-    base_url = "https://advanced-filters.preview.emergentagent.com/api"
+    base_url = "https://codebase-sync-45.preview.emergentagent.com/api"
     
     # Login as user
     login_data = {"email": "user1@example.com", "password": "password123"}
