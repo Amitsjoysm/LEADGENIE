@@ -323,8 +323,8 @@ class LeadGenAPITester:
                 profiles = data.get("profiles", [])
                 total = data.get("total", 0)
                 
-                if profiles and len(profiles) > 0:
-                    self.log_result("Profile Search - Basic", True, f"Found {len(profiles)} profiles (total: {total})")
+                if profiles and len(profiles) > 0 and total >= 5000:
+                    self.log_result("Profile Search - 5000 Profiles", True, f"Found {len(profiles)} profiles (total: {total})")
                     
                     # Check data masking for regular user
                     first_profile = profiles[0]
@@ -339,8 +339,10 @@ class LeadGenAPITester:
                         self.log_result("Profile Search - Data Masking", True, f"Data properly masked: emails={emails}, phones={phones}")
                     else:
                         self.log_result("Profile Search - Data Masking", False, f"Data not masked: emails={emails}, phones={phones}")
+                elif profiles and total < 5000:
+                    self.log_result("Profile Search - 5000 Profiles", False, f"Expected 5000+ profiles, got {total}")
                 else:
-                    self.log_result("Profile Search - Basic", False, f"No profiles found: {data}")
+                    self.log_result("Profile Search - 5000 Profiles", False, f"No profiles found: {data}")
             else:
                 self.log_result("Profile Search - Basic", False, f"Status: {response.status_code}, Response: {response.text}")
                 
