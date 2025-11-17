@@ -1,8 +1,8 @@
 from fastapi import HTTPException, status
 from database import get_db, get_shard_key
-from models import Profile, ProfileCreate, ProfileFilter
+from models import Profile, ProfileCreate, ProfileFilter, CompanyCreate
 from utils import mask_email, mask_phone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import uuid
 import logging
@@ -21,22 +21,125 @@ class ProfileService:
         shard = get_shard_key(last_name)
         return f'profiles_{shard}'
     
-    async def create_profile(self, profile_data: ProfileCreate) -> Profile:
-        """Create a new profile"""
+    async def check_email_exists(self, email: str) -> bool:
+        """Check if email already exists in unique_emails collection"""
         try:
+            # Normalize email
+            email = email.lower().strip()
+            
+            existing = await self.db.unique_emails.find_one({"email": email})
+            return existing is not None
+            
+        except Exception as e:
+            logger.error(f"Check email exists error: {e}")
+            return False
+    
+    async def find_or_create_company(self, company_name: str, company_domain: str) -> str:
+        """Find existing company by domain or create new one. Returns company_id."""
+        try:
+            from services.company_service import company_service
+            company_service.set_db(self.db)
+            
+            # Normalize domain
+            domain = company_domain.lower().strip()
+            
+            # Try to find existing company by domain
+            existing_company = await company_service.find_company_by_domain(domain)
+            
+            if existing_company:
+                logger.info(f"Found existing company with domain: {domain}")
+                return existing_company.id
+            
+            # Create new company
+            logger.info(f"Creating new company with domain: {domain}")
+            new_company = await company_service.create_company(CompanyCreate(
+                name=company_name,
+                domain=domain
+            ))
+            
+            return new_company.id
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Find or create company error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to find or create company"
+            )
+    
+    async def create_profile(self, profile_data: ProfileCreate) -> Profile:
+        """Create a new profile with email uniqueness check and company linking"""
+        try:
+            # Check email uniqueness for all provided emails
+            for email in profile_data.emails:
+                email_normalized = email.lower().strip()
+                if await self.check_email_exists(email_normalized):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Email '{email}' is already registered to another profile"
+                    )
+            
+            # Find or create company and get company_id
+            company_id = await self.find_or_create_company(
+                profile_data.company_name,
+                profile_data.company_domain
+            )
+            
             collection_name = self._get_collection_name(profile_data.last_name)
+            profile_id = str(uuid.uuid4())
             
             profile_dict = {
-                "id": str(uuid.uuid4()),
-                **profile_data.dict(),
+                "id": profile_id,
+                "first_name": profile_data.first_name,
+                "last_name": profile_data.last_name,
+                "job_title": profile_data.job_title,
+                "industry": profile_data.industry,
+                "sub_industry": profile_data.sub_industry,
+                "keywords": profile_data.keywords,
+                "seo_description": profile_data.seo_description,
+                "company_id": company_id,  # NEW: Link to company
+                "company_name": profile_data.company_name,
+                "company_domain": profile_data.company_domain.lower().strip(),
+                "profile_linkedin_url": profile_data.profile_linkedin_url,
+                "company_linkedin_url": profile_data.company_linkedin_url,
+                "emails": [e.lower().strip() for e in profile_data.emails],
+                "phones": profile_data.phones,
+                "city": profile_data.city,
+                "state": profile_data.state,
+                "country": profile_data.country,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
+            # Insert profile
             await self.db[collection_name].insert_one(profile_dict)
+            
+            # Register all emails in unique_emails collection
+            try:
+                for email in profile_dict["emails"]:
+                    email_normalized = email.lower().strip()
+                    await self.db.unique_emails.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "email": email_normalized,
+                        "profile_id": profile_id,
+                        "shard_name": collection_name,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+            except Exception as email_err:
+                # Rollback profile creation if email registration fails
+                await self.db[collection_name].delete_one({"id": profile_id})
+                logger.error(f"Failed to register emails: {email_err}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to register profile emails"
+                )
+            
             profile_dict.pop('_id', None)
             return Profile(**profile_dict)
             
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Create profile error: {e}")
             raise HTTPException(
