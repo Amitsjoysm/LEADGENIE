@@ -232,7 +232,7 @@ class Company(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    domain: Optional[str] = None
+    domain: str  # Required - unique identifier for company
     linkedin_url: Optional[str] = None
     revenue: Optional[str] = None
     employee_size: Optional[str] = None
