@@ -378,14 +378,19 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.1"
-  test_sequence: 1
+  version: "1.2"
+  test_sequence: 2
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Verify all services working after restart"
+    - "Test Redis connectivity"
+    - "Test Celery task registration"
+    - "Verify seed data loaded correctly"
+    - "Test all API endpoints with new data"
   stuck_tasks: []
-  test_all: false
+  test_all: true
   test_priority: "high_first"
 
 agent_communication:
