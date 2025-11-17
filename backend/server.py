@@ -468,7 +468,7 @@ async def update_company(
 ):
     """Update company (super admin only)"""
     try:
-        company = company_service.update_company(company_id, request.dict(exclude_unset=True))
+        company = await company_service.update_company(company_id, request.dict(exclude_unset=True))
         return company
     except ValueError as e:
         raise HTTPException(
@@ -483,7 +483,7 @@ async def delete_company(
 ):
     """Delete company (super admin only)"""
     try:
-        company_service.delete_company(company_id)
+        await company_service.delete_company(company_id)
         return {"message": "Company deleted successfully"}
     except ValueError as e:
         raise HTTPException(
