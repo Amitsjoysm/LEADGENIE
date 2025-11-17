@@ -313,8 +313,8 @@ class LeadGenAPITester:
             
             # Test basic search
             search_filters = {
-                "skip": 0,
-                "limit": 10
+                "page": 1,
+                "page_size": 10
             }
             
             response = self.make_request("POST", "/profiles/search", search_filters, headers=headers)
@@ -344,10 +344,10 @@ class LeadGenAPITester:
             else:
                 self.log_result("Profile Search - Basic", False, f"Status: {response.status_code}, Response: {response.text}")
                 
-            # Test search with filters
+            # Test search with traditional filters
             filtered_search = {
-                "skip": 0,
-                "limit": 5,
+                "page": 1,
+                "page_size": 5,
                 "industry": "Technology",
                 "location": "San Francisco"
             }
@@ -356,12 +356,113 @@ class LeadGenAPITester:
             if response.status_code == 200:
                 data = response.json()
                 profiles = data.get("profiles", [])
-                self.log_result("Profile Search - Filtered", True, f"Filtered search returned {len(profiles)} profiles")
+                self.log_result("Profile Search - Traditional Filters", True, f"Filtered search returned {len(profiles)} profiles")
             else:
-                self.log_result("Profile Search - Filtered", False, f"Status: {response.status_code}")
+                self.log_result("Profile Search - Traditional Filters", False, f"Status: {response.status_code}")
                 
         except Exception as e:
             self.log_result("Profile Search", False, f"Exception: {str(e)}")
+    
+    def test_profile_search_new_filters(self):
+        """Test profile search with new enhanced filters"""
+        if not self.user_token:
+            self.log_result("Profile Search New Filters", False, "No user token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.user_token)
+            
+            # Test experience years filter
+            experience_search = {
+                "page": 1,
+                "page_size": 10,
+                "experience_years_min": 5,
+                "experience_years_max": 15
+            }
+            
+            response = self.make_request("POST", "/profiles/search", experience_search, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                self.log_result("Profile Search - Experience Years Filter", True, 
+                              f"Experience filter returned {len(profiles)} profiles")
+            else:
+                self.log_result("Profile Search - Experience Years Filter", False, 
+                              f"Status: {response.status_code}")
+            
+            # Test company size filter
+            company_size_search = {
+                "page": 1,
+                "page_size": 10,
+                "company_size": "100-500"
+            }
+            
+            response = self.make_request("POST", "/profiles/search", company_size_search, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                self.log_result("Profile Search - Company Size Filter", True, 
+                              f"Company size filter returned {len(profiles)} profiles")
+            else:
+                self.log_result("Profile Search - Company Size Filter", False, 
+                              f"Status: {response.status_code}")
+            
+            # Test revenue range filter
+            revenue_search = {
+                "page": 1,
+                "page_size": 10,
+                "revenue_range": "$10M-$50M"
+            }
+            
+            response = self.make_request("POST", "/profiles/search", revenue_search, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                self.log_result("Profile Search - Revenue Range Filter", True, 
+                              f"Revenue filter returned {len(profiles)} profiles")
+            else:
+                self.log_result("Profile Search - Revenue Range Filter", False, 
+                              f"Status: {response.status_code}")
+            
+            # Test skills filter
+            skills_search = {
+                "page": 1,
+                "page_size": 10,
+                "skills": "Leadership,Strategy"
+            }
+            
+            response = self.make_request("POST", "/profiles/search", skills_search, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                self.log_result("Profile Search - Skills Filter", True, 
+                              f"Skills filter returned {len(profiles)} profiles")
+            else:
+                self.log_result("Profile Search - Skills Filter", False, 
+                              f"Status: {response.status_code}")
+            
+            # Test combined new filters
+            combined_search = {
+                "page": 1,
+                "page_size": 5,
+                "experience_years_min": 3,
+                "experience_years_max": 20,
+                "company_size": "100-500",
+                "skills": "Leadership"
+            }
+            
+            response = self.make_request("POST", "/profiles/search", combined_search, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                profiles = data.get("profiles", [])
+                self.log_result("Profile Search - Combined New Filters", True, 
+                              f"Combined filters returned {len(profiles)} profiles")
+            else:
+                self.log_result("Profile Search - Combined New Filters", False, 
+                              f"Status: {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("Profile Search New Filters", False, f"Exception: {str(e)}")
     
     def test_profile_reveal(self):
         """Test credit-based contact reveal (MOST IMPORTANT)"""
