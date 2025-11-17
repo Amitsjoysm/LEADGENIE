@@ -243,7 +243,7 @@ class ProductionReadinessTest:
         current_credits = me_response.json().get("credits", 0)
         
         if current_credits >= 3:
-            reveal_data = {"reveal_type": "phone"}
+            reveal_data = {"profile_id": profile_id, "reveal_type": "phone"}
             response = self.make_request("POST", f"/profiles/{profile_id}/reveal", reveal_data, headers=headers)
             
             if response.status_code == 200:
