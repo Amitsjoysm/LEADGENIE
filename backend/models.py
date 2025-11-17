@@ -112,7 +112,7 @@ class ProfileCreateRequest(BaseModel):
     keywords: Optional[List[str]] = []
     seo_description: Optional[str] = None
     company_name: str
-    company_domain: Optional[str] = None
+    company_domain: str  # Required for company lookup/creation
     profile_linkedin_url: Optional[str] = None
     company_linkedin_url: Optional[str] = None
     emails: List[str] = []
