@@ -230,7 +230,7 @@ async def update_user(
 ):
     """Update user (super admin only)"""
     try:
-        user = user_service.update_user(user_id, request.dict(exclude_unset=True))
+        user = await user_service.update_user(user_id, request.dict(exclude_unset=True))
         return user
     except ValueError as e:
         raise HTTPException(
