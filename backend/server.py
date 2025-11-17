@@ -162,6 +162,9 @@ async def login(request: LoginRequest):
         )
         result = await auth_service.login_user(user_login)
         return result
+    except HTTPException:
+        # Re-raise HTTPException with correct status code
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
