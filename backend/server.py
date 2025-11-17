@@ -388,9 +388,9 @@ async def reveal_contact(
 ):
     """Reveal contact information (email or phone)"""
     try:
-        result = profile_service.reveal_contact(
-            profile_id=profile_id,
+        result = await profile_service.reveal_contact(
             user_id=current_user.id,
+            profile_id=profile_id,
             reveal_type=request.reveal_type
         )
         return result
