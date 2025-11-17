@@ -631,6 +631,26 @@ agent_communication:
       - Ready for 10k+ users as per requirements
       
       🎯 PRODUCTION STATUS: READY FOR DEPLOYMENT
+  - agent: "main"
+    message: |
+      ✅ VALIDATION ERROR HANDLING FIXED
+      
+      🔧 ISSUES RESOLVED:
+      1. ✅ Duplicate email registration now returns 400 Bad Request (was 500)
+      2. ✅ Invalid login credentials now return 401 Unauthorized (was 500)
+      
+      💻 CHANGES MADE:
+      - Modified /app/backend/server.py to properly handle HTTPException
+      - Added explicit HTTPException catch before generic Exception catch
+      - This allows auth_service to raise proper status codes that propagate correctly
+      
+      🧪 TESTING RESULTS:
+      - ✅ Duplicate email: Returns 400 with "Email already registered"
+      - ✅ Invalid email login: Returns 401 with "Invalid email or password"
+      - ✅ Invalid password login: Returns 401 with "Invalid email or password"
+      - ✅ Valid login: Returns 200 with access token
+      
+      🎯 STATUS: All validation errors now return proper HTTP status codes for production
   - agent: "testing"
     message: |
       🎯 PRODUCTION READINESS CHECK COMPLETE - CREDIT SYSTEM & PAYMENT ENDPOINTS
