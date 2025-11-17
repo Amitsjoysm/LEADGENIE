@@ -127,12 +127,14 @@ async def require_super_admin(current_user: User = Depends(get_current_user)) ->
 async def register(request: RegisterRequest):
     """Register new user"""
     try:
-        result = auth_service.register_user(
+        # Create UserCreate object
+        user_create = UserCreate(
             email=request.email,
             password=request.password,
-            first_name=request.first_name,
-            last_name=request.last_name
+            full_name=f"{request.first_name} {request.last_name}",
+            role="user"
         )
+        result = await auth_service.register_user(user_create)
         return result
     except ValueError as e:
         raise HTTPException(
