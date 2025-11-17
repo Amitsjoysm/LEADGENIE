@@ -490,7 +490,7 @@ async def get_plans(
     page_size: int = 20
 ):
     """Get all plans (public)"""
-    plans = plan_service.get_all_plans(page=page, page_size=page_size)
+    plans = await plan_service.get_all_plans()
     return plans
 
 @api_router.get("/plans/{plan_id}")
