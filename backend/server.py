@@ -346,7 +346,7 @@ async def create_profile(
 ):
     """Create new profile (super admin only)"""
     try:
-        profile = profile_service.create_profile(request.dict())
+        profile = await profile_service.create_profile(request.dict())
         return profile
     except Exception as e:
         logger.error(f"Create profile error: {e}")
