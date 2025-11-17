@@ -436,7 +436,7 @@ async def get_company(
     current_user: User = Depends(require_super_admin)
 ):
     """Get company by ID (super admin only)"""
-    company = company_service.get_company_by_id(company_id)
+    company = await company_service.get_company_by_id(company_id)
     if not company:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
