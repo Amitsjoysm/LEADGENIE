@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { PlansPage } from './pages/PlansPage';
+import { BulkUploadPage } from './pages/BulkUploadPage';
 import './App.css';
 
 // Protected Route Component
