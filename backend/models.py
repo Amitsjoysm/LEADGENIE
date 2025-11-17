@@ -218,7 +218,7 @@ class CompanyUpdateRequest(BaseModel):
 
 class CompanyCreate(BaseModel):
     name: str
-    domain: Optional[str] = None
+    domain: str  # Required - unique identifier for company
     linkedin_url: Optional[str] = None
     revenue: Optional[str] = None
     employee_size: Optional[str] = None
