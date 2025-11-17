@@ -363,7 +363,7 @@ async def update_profile(
 ):
     """Update profile (super admin only)"""
     try:
-        profile = profile_service.update_profile(profile_id, request.dict(exclude_unset=True))
+        profile = await profile_service.update_profile(profile_id, request.dict(exclude_unset=True))
         return profile
     except ValueError as e:
         raise HTTPException(
@@ -378,7 +378,7 @@ async def delete_profile(
 ):
     """Delete profile (super admin only)"""
     try:
-        profile_service.delete_profile(profile_id)
+        await profile_service.delete_profile(profile_id)
         return {"message": "Profile deleted successfully"}
     except ValueError as e:
         raise HTTPException(
