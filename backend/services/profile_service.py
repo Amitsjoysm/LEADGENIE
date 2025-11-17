@@ -70,6 +70,26 @@ class ProfileService:
             if filters.keywords:
                 query['keywords'] = {'$in': filters.keywords}
             
+            # New filter fields
+            if filters.experience_years_min is not None or filters.experience_years_max is not None:
+                exp_query = {}
+                if filters.experience_years_min is not None:
+                    exp_query['$gte'] = filters.experience_years_min
+                if filters.experience_years_max is not None:
+                    exp_query['$lte'] = filters.experience_years_max
+                query['experience_years'] = exp_query
+            
+            if filters.company_size:
+                query['company_size'] = filters.company_size
+            
+            if filters.revenue_range:
+                query['revenue_range'] = filters.revenue_range
+            
+            if filters.skills:
+                # Skills can be comma-separated, so search in skills array
+                skills_list = [skill.strip() for skill in filters.skills.split(',')]
+                query['skills'] = {'$in': skills_list}
+            
             # Query all shards
             all_profiles = []
             shards = [chr(i) for i in range(ord('a'), ord('z') + 1)] + ['other']
