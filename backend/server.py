@@ -209,7 +209,8 @@ async def get_users(
     current_user: User = Depends(require_super_admin)
 ):
     """Get all users (super admin only)"""
-    users = user_service.get_all_users(page=page, page_size=page_size, role_filter=role)
+    skip = (page - 1) * page_size
+    users = await user_service.get_all_users(skip=skip, limit=page_size, role=role)
     return users
 
 @api_router.get("/users/{user_id}")
