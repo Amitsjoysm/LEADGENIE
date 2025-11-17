@@ -558,6 +558,96 @@ class LeadGenAPITester:
     
     # ========== BULK UPLOAD TESTS ==========
     
+    def test_bulk_upload_template_downloads(self):
+        """Test bulk upload template download endpoints"""
+        if not self.admin_token:
+            self.log_result("Template Downloads", False, "No admin token available")
+            return
+            
+        try:
+            headers = self.get_auth_headers(self.admin_token)
+            
+            # Expected template structures
+            expected_templates = {
+                "profiles": [
+                    "first_name", "last_name", "job_title", "company_name", "industry",
+                    "emails", "phones", "city", "state", "country", "linkedin_url",
+                    "experience_years", "skills"
+                ],
+                "companies": [
+                    "name", "industry", "size", "revenue", "website", "description",
+                    "city", "state", "country", "founded_year"
+                ],
+                "combined": [
+                    "type", "first_name", "last_name", "job_title", "company_name", 
+                    "industry", "emails", "phones", "city", "state", "country", 
+                    "linkedin_url", "experience_years", "skills", "size", "revenue", 
+                    "website", "description", "founded_year"
+                ]
+            }
+            
+            # Test each template type
+            for template_type, expected_fields in expected_templates.items():
+                response = self.make_request("GET", f"/bulk-upload/templates/{template_type}", headers=headers)
+                
+                if response.status_code == 200:
+                    # Check if response is CSV
+                    content_type = response.headers.get('content-type', '')
+                    if 'text/csv' in content_type:
+                        # Parse CSV content
+                        csv_content = response.text
+                        lines = csv_content.strip().split('\n')
+                        if lines:
+                            header_line = lines[0]
+                            actual_fields = [field.strip('"') for field in header_line.split(',')]
+                            
+                            # Check if all expected fields are present
+                            missing_fields = set(expected_fields) - set(actual_fields)
+                            extra_fields = set(actual_fields) - set(expected_fields)
+                            
+                            if not missing_fields and not extra_fields:
+                                self.log_result(f"Template Download - {template_type.title()}", True, 
+                                              f"Template structure correct: {len(actual_fields)} fields")
+                            else:
+                                error_msg = ""
+                                if missing_fields:
+                                    error_msg += f"Missing: {missing_fields} "
+                                if extra_fields:
+                                    error_msg += f"Extra: {extra_fields}"
+                                self.log_result(f"Template Download - {template_type.title()}", False, 
+                                              f"Template structure incorrect: {error_msg}")
+                        else:
+                            self.log_result(f"Template Download - {template_type.title()}", False, "Empty CSV content")
+                    else:
+                        self.log_result(f"Template Download - {template_type.title()}", False, 
+                                      f"Wrong content type: {content_type}")
+                else:
+                    self.log_result(f"Template Download - {template_type.title()}", False, 
+                                  f"Status: {response.status_code}")
+            
+            # Test authentication requirement - try with regular user token
+            if self.user_token:
+                user_headers = self.get_auth_headers(self.user_token)
+                response = self.make_request("GET", "/bulk-upload/templates/profiles", headers=user_headers)
+                if response.status_code == 403:
+                    self.log_result("Template Downloads - Access Control", True, 
+                                  "Regular user correctly denied access")
+                else:
+                    self.log_result("Template Downloads - Access Control", False, 
+                                  f"Should deny access, got: {response.status_code}")
+            
+            # Test invalid template type
+            response = self.make_request("GET", "/bulk-upload/templates/invalid", headers=headers)
+            if response.status_code == 400:
+                self.log_result("Template Downloads - Invalid Type", True, 
+                              "Invalid template type correctly rejected")
+            else:
+                self.log_result("Template Downloads - Invalid Type", False, 
+                              f"Should reject invalid type, got: {response.status_code}")
+                
+        except Exception as e:
+            self.log_result("Template Downloads", False, f"Exception: {str(e)}")
+    
     def test_bulk_upload_endpoints(self):
         """Test bulk upload endpoints (without actual file upload)"""
         if not self.admin_token:
