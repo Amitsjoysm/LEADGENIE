@@ -18,6 +18,23 @@ class UserRole(str):
     ADMIN = 'admin'
     USER = 'user'
 
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
