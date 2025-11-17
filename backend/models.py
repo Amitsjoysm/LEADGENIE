@@ -55,6 +55,15 @@ class User(BaseModel):
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class UpdateUserRequest(BaseModel):
+    full_name: Optional[str] = None
+    credits: Optional[int] = None
+    is_active: Optional[bool] = None
+    role: Optional[str] = None
+
+class CreditRequest(BaseModel):
+    amount: int
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     credits: Optional[int] = None
