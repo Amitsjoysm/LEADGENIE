@@ -48,6 +48,15 @@ async def create_indexes():
         # Plans
         await Database.db.plans.create_index('is_active')
         
+        # UNIQUENESS TRACKING COLLECTIONS (non-sharded for global uniqueness)
+        # Unique emails - tracks all profile emails globally
+        await Database.db.unique_emails.create_index('email', unique=True)
+        await Database.db.unique_emails.create_index('profile_id')
+        
+        # Unique domains - tracks all company domains globally
+        await Database.db.unique_domains.create_index('domain', unique=True)
+        await Database.db.unique_domains.create_index('company_id')
+        
         # Create indexes for sharded profile collections (a-z + other)
         shards = [chr(i) for i in range(ord('a'), ord('z') + 1)] + ['other']
         
@@ -61,11 +70,13 @@ async def create_indexes():
             await Database.db[profile_collection].create_index('job_title')
             await Database.db[profile_collection].create_index('industry')
             await Database.db[profile_collection].create_index('company_name')
+            await Database.db[profile_collection].create_index('company_id')  # NEW: Link to company
             await Database.db[profile_collection].create_index('country')
             await Database.db[profile_collection].create_index([('first_name', 'text'), ('last_name', 'text'), ('job_title', 'text')])
             
             # Company indexes
             await Database.db[company_collection].create_index('name')
+            await Database.db[company_collection].create_index('domain')  # For domain lookups
             await Database.db[company_collection].create_index('industry')
             await Database.db[company_collection].create_index('employee_size')
             await Database.db[company_collection].create_index('country')
