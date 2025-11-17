@@ -453,7 +453,9 @@ async def create_company(
 ):
     """Create new company (super admin only)"""
     try:
-        company = await company_service.create_company(request.dict())
+        # Convert request to CompanyCreate object
+        company_create = CompanyCreate(**request.dict())
+        company = await company_service.create_company(company_create)
         return company
     except Exception as e:
         logger.error(f"Create company error: {e}")
