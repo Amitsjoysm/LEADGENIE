@@ -220,19 +220,31 @@ async def create_seed_data():
         print(f"   ✓ Created {companies_created} companies across sharded collections")
         print(f"   ✓ Registered {len(company_map)} unique domains")
         
-        # 5. Create Profiles
+        # 5. Create Profiles with company relationships and unique emails
         print("\n5. Creating profiles (this may take a few moments)...")
         profiles_created = 0
+        emails_registered = 0
+        
+        # Clear unique_emails collection
+        await db.unique_emails.delete_many({})
+        
         for i in range(5000):  # Create 5000 profiles
             first_name = random.choice(FIRST_NAMES)
             last_name = random.choice(LAST_NAMES)
             industry = random.choice(INDUSTRIES)
             sub_industry = random.choice(SUB_INDUSTRIES.get(industry, ["Other"]))
             city = random.choice(CITIES)
-            company_name = f"{random.choice(COMPANY_NAMES)} {random.randint(1, 1000)}"
+            
+            # Link to existing company
+            company_domain = f"company{random.randint(1, 1000)}.com"
+            company_id = company_map.get(company_domain, company_map[f"company{random.randint(1, 100)}.com"])  # Fallback
+            company_name = f"{random.choice(COMPANY_NAMES)} {company_domain.replace('.com', '').replace('company', '')}"
+            
+            profile_id = str(uuid.uuid4())
+            email = f"{first_name.lower()}.{last_name.lower()}{i}@{company_domain}"
             
             profile = {
-                "id": str(uuid.uuid4()),
+                "id": profile_id,
                 "first_name": first_name,
                 "last_name": last_name,
                 "job_title": random.choice(JOB_TITLES),
@@ -240,11 +252,12 @@ async def create_seed_data():
                 "sub_industry": sub_industry,
                 "keywords": [industry, sub_industry, random.choice(JOB_TITLES)],
                 "seo_description": f"{first_name} {last_name} - {random.choice(JOB_TITLES)} at {company_name}",
+                "company_id": company_id,  # NEW: Link to company
                 "company_name": company_name,
-                "company_domain": f"company{random.randint(1, 1000)}.com",
+                "company_domain": company_domain,
                 "profile_linkedin_url": f"https://linkedin.com/in/{first_name.lower()}{last_name.lower()}{i}",
                 "company_linkedin_url": f"https://linkedin.com/company/{company_name.lower().replace(' ', '')}",
-                "emails": [f"{first_name.lower()}.{last_name.lower()}@company{random.randint(1, 1000)}.com"],
+                "emails": [email],
                 "phones": [f"+1-{random.randint(200, 999)}-{random.randint(200, 999)}-{random.randint(1000, 9999)}"],
                 "city": city,
                 "state": STATES.get(city, "CA"),
@@ -258,10 +271,21 @@ async def create_seed_data():
             await db[collection_name].insert_one(profile)
             profiles_created += 1
             
+            # Register email in unique_emails collection
+            await db.unique_emails.insert_one({
+                "id": str(uuid.uuid4()),
+                "email": email.lower(),
+                "profile_id": profile_id,
+                "shard_name": collection_name,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            emails_registered += 1
+            
             if (i + 1) % 1000 == 0:
                 print(f"   Progress: {i+1}/5000 profiles created...")
         
         print(f"   ✓ Created {profiles_created} profiles across sharded collections")
+        print(f"   ✓ Registered {emails_registered} unique emails")
         
         print("\n" + "="*60)
         print("SEED DATA GENERATION COMPLETE!")
