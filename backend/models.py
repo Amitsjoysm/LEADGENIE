@@ -88,6 +88,57 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
 
 # Profile Models
+class ProfileSearchRequest(BaseModel):
+    name: Optional[str] = None
+    job_title: Optional[str] = None
+    company_name: Optional[str] = None
+    industry: Optional[str] = None
+    location: Optional[str] = None
+    keywords: Optional[str] = None
+    experience_years_min: Optional[int] = None
+    experience_years_max: Optional[int] = None
+    company_size: Optional[str] = None
+    revenue_range: Optional[str] = None
+    skills: Optional[str] = None
+    page: int = 1
+    page_size: int = 20
+
+class ProfileCreateRequest(BaseModel):
+    first_name: str
+    last_name: str
+    job_title: str
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    keywords: Optional[List[str]] = []
+    seo_description: Optional[str] = None
+    company_name: str
+    company_domain: Optional[str] = None
+    profile_linkedin_url: Optional[str] = None
+    company_linkedin_url: Optional[str] = None
+    emails: List[str] = []
+    phones: List[str] = []
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class ProfileUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    job_title: Optional[str] = None
+    industry: Optional[str] = None
+    sub_industry: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    seo_description: Optional[str] = None
+    company_name: Optional[str] = None
+    company_domain: Optional[str] = None
+    profile_linkedin_url: Optional[str] = None
+    company_linkedin_url: Optional[str] = None
+    emails: Optional[List[str]] = None
+    phones: Optional[List[str]] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
 class ProfileCreate(BaseModel):
     first_name: str
     last_name: str
