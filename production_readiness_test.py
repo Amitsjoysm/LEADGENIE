@@ -208,7 +208,7 @@ class ProductionReadinessTest:
         self.log_result("Get Current Credits", True, f"User has {original_credits} credits")
         
         # Test email reveal (costs 1 credit)
-        reveal_data = {"reveal_type": "email"}
+        reveal_data = {"profile_id": profile_id, "reveal_type": "email"}
         response = self.make_request("POST", f"/profiles/{profile_id}/reveal", reveal_data, headers=headers)
         
         if response.status_code == 200:
