@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 
 class LeadGenAPITester:
     def __init__(self):
-        self.base_url = "https://codebase-sync-45.preview.emergentagent.com/api"
+        self.base_url = "https://endpoint-verify-1.preview.emergentagent.com/api"
         self.session = requests.Session()
         self.admin_token = None
         self.user_token = None
