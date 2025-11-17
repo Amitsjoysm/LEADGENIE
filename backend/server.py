@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
@@ -8,6 +9,8 @@ import logging
 from typing import List, Optional, Dict, Any
 import json
 import redis.asyncio as redis
+import io
+import csv
 
 # Import configurations and database
 from config import config
@@ -98,13 +101,20 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Invalid token payload"
         )
     
-    user = await auth_service.get_user_by_email(email)
-    return user
+    # Get user from database
+    user_data = user_service.get_user_by_email(email)
+    if not user_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    return User(**user_data)
 
 # Dependency for super admin only
 async def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     """Require super admin role"""
-    if current_user.role != UserRole.SUPER_ADMIN:
+    if current_user.role != "super_admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super admin access required"
@@ -113,65 +123,117 @@ async def require_super_admin(current_user: User = Depends(get_current_user)) ->
 
 # ========== AUTH ENDPOINTS ==========
 
-@api_router.post("/auth/register", response_model=User, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
-async def register(user_data: UserCreate):
-    """Register a new user"""
-    return await auth_service.register_user(user_data)
+@api_router.post("/auth/register", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def register(request: RegisterRequest):
+    """Register new user"""
+    try:
+        result = auth_service.register_user(
+            email=request.email,
+            password=request.password,
+            first_name=request.first_name,
+            last_name=request.last_name
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
+        )
 
-@api_router.post("/auth/login", response_model=Token, dependencies=[Depends(RateLimiter(times=10, seconds=60))])
-async def login(login_data: UserLogin):
+@api_router.post("/auth/login", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
+async def login(request: LoginRequest):
     """Login user"""
-    return await auth_service.login_user(login_data)
+    try:
+        result = auth_service.login_user(request.email, request.password)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Login failed"
+        )
 
-@api_router.get("/auth/me", response_model=User)
-async def get_me(current_user: User = Depends(get_current_user)):
-    """Get current user info"""
+@api_router.get("/auth/me")
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get current user information"""
     return current_user
 
 @api_router.post("/auth/forgot-password", dependencies=[Depends(RateLimiter(times=3, seconds=60))])
-async def forgot_password(reset_request: PasswordResetRequest):
+async def forgot_password(request: ForgotPasswordRequest):
     """Request password reset"""
-    token = await auth_service.create_password_reset_token(reset_request.email)
-    
-    # Send email (async task)
-    await email_service.send_password_reset_email(reset_request.email, token)
-    
-    return {"message": "Password reset email sent if account exists"}
+    try:
+        auth_service.forgot_password(request.email)
+        return {"message": "Password reset email sent"}
+    except Exception as e:
+        logger.error(f"Forgot password error: {e}")
+        # Don't reveal if email exists
+        return {"message": "Password reset email sent"}
 
 @api_router.post("/auth/reset-password", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
-async def reset_password(reset_confirm: PasswordResetConfirm):
+async def reset_password(request: ResetPasswordRequest):
     """Reset password with token"""
-    await auth_service.reset_password(reset_confirm.token, reset_confirm.new_password)
-    return {"message": "Password reset successful"}
+    try:
+        auth_service.reset_password(request.token, request.new_password)
+        return {"message": "Password reset successful"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 # ========== USER ENDPOINTS ==========
 
-@api_router.get("/users", response_model=List[User])
+@api_router.get("/users")
 async def get_users(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    page_size: int = 20,
     role: Optional[str] = None,
     current_user: User = Depends(require_super_admin)
 ):
     """Get all users (super admin only)"""
-    return await user_service.get_all_users(skip, limit, role)
+    users = user_service.get_all_users(page=page, page_size=page_size, role_filter=role)
+    return users
 
-@api_router.get("/users/{user_id}", response_model=User)
+@api_router.get("/users/{user_id}")
 async def get_user(
     user_id: str,
     current_user: User = Depends(require_super_admin)
 ):
     """Get user by ID (super admin only)"""
-    return await user_service.get_user_by_id(user_id)
+    user = user_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return user
 
-@api_router.patch("/users/{user_id}", response_model=User)
+@api_router.put("/users/{user_id}")
 async def update_user(
     user_id: str,
-    user_update: UserUpdate,
+    request: UpdateUserRequest,
     current_user: User = Depends(require_super_admin)
 ):
     """Update user (super admin only)"""
-    return await user_service.update_user(user_id, user_update)
+    try:
+        user = user_service.update_user(user_id, request.dict(exclude_unset=True))
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(
@@ -179,55 +241,93 @@ async def delete_user(
     current_user: User = Depends(require_super_admin)
 ):
     """Delete user (super admin only)"""
-    await user_service.delete_user(user_id)
-    return {"message": "User deleted successfully"}
+    try:
+        user_service.delete_user(user_id)
+        return {"message": "User deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
-@api_router.post("/users/{user_id}/credits", response_model=User)
+@api_router.post("/users/{user_id}/credits")
 async def add_credits(
     user_id: str,
-    credits: int,
+    request: CreditRequest,
     current_user: User = Depends(require_super_admin)
 ):
-    """Add credits to user (super admin only)"""
-    return await user_service.add_credits(user_id, credits)
+    """Add or deduct credits from user (super admin only)"""
+    try:
+        user = user_service.add_credits(user_id, request.amount)
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 # ========== PROFILE ENDPOINTS ==========
 
-@api_router.post("/profiles", response_model=Profile)
-async def create_profile(
-    profile_data: ProfileCreate,
-    current_user: User = Depends(require_super_admin)
-):
-    """Create profile (super admin only)"""
-    return await profile_service.create_profile(profile_data)
-
 @api_router.post("/profiles/search")
 async def search_profiles(
-    filters: ProfileFilter,
+    request: ProfileSearchRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Search profiles with filters"""
-    # Regular users see masked data
-    mask_data = current_user.role != UserRole.SUPER_ADMIN
-    return await profile_service.get_profiles(filters, mask_data)
+    is_admin = current_user.role == "super_admin"
+    results = profile_service.search_profiles(
+        filters=request.dict(exclude={'page', 'page_size'}),
+        page=request.page,
+        page_size=request.page_size,
+        mask_data=not is_admin
+    )
+    return results
 
-@api_router.get("/profiles/{profile_id}", response_model=Profile)
+@api_router.get("/profiles/{profile_id}")
 async def get_profile(
     profile_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_super_admin)
 ):
-    """Get profile by ID"""
-    mask_data = current_user.role != UserRole.SUPER_ADMIN
-    return await profile_service.get_profile_by_id(profile_id, mask_data)
+    """Get profile by ID (super admin only)"""
+    profile = profile_service.get_profile_by_id(profile_id, mask_data=False)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found"
+        )
+    return profile
 
-@api_router.patch("/profiles/{profile_id}", response_model=Profile)
+@api_router.post("/profiles")
+async def create_profile(
+    request: ProfileCreateRequest,
+    current_user: User = Depends(require_super_admin)
+):
+    """Create new profile (super admin only)"""
+    try:
+        profile = profile_service.create_profile(request.dict())
+        return profile
+    except Exception as e:
+        logger.error(f"Create profile error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@api_router.put("/profiles/{profile_id}")
 async def update_profile(
     profile_id: str,
-    update_data: dict,
+    request: ProfileUpdateRequest,
     current_user: User = Depends(require_super_admin)
 ):
     """Update profile (super admin only)"""
-    return await profile_service.update_profile(profile_id, update_data)
+    try:
+        profile = profile_service.update_profile(profile_id, request.dict(exclude_unset=True))
+        return profile
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 @api_router.delete("/profiles/{profile_id}")
 async def delete_profile(
@@ -235,62 +335,101 @@ async def delete_profile(
     current_user: User = Depends(require_super_admin)
 ):
     """Delete profile (super admin only)"""
-    await profile_service.delete_profile(profile_id)
-    return {"message": "Profile deleted successfully"}
+    try:
+        profile_service.delete_profile(profile_id)
+        return {"message": "Profile deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 @api_router.post("/profiles/{profile_id}/reveal")
-async def reveal_contact_endpoint(
+async def reveal_contact(
     profile_id: str,
-    reveal_request: RevealRequest,
+    request: RevealRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Reveal email or phone (costs credits, charges only once per unique reveal)"""
-    if reveal_request.reveal_type not in ['email', 'phone']:
+    """Reveal contact information (email or phone)"""
+    try:
+        result = profile_service.reveal_contact(
+            profile_id=profile_id,
+            user_id=current_user.id,
+            reveal_type=request.reveal_type
+        )
+        return result
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="reveal_type must be 'email' or 'phone'"
+            detail=str(e)
         )
-    
-    return await profile_service.reveal_contact(
-        user_id=current_user.id,
-        profile_id=profile_id,
-        reveal_type=reveal_request.reveal_type
-    )
+    except Exception as e:
+        logger.error(f"Reveal contact error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 # ========== COMPANY ENDPOINTS ==========
 
-@api_router.post("/companies", response_model=Company)
-async def create_company(
-    company_data: CompanyCreate,
-    current_user: User = Depends(require_super_admin)
-):
-    """Create company (super admin only)"""
-    return await company_service.create_company(company_data)
-
 @api_router.post("/companies/search")
 async def search_companies(
-    filters: CompanyFilter,
+    request: CompanySearchRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Search companies with filters"""
-    return await company_service.get_companies(filters)
+    results = company_service.search_companies(
+        filters=request.dict(exclude={'page', 'page_size'}),
+        page=request.page,
+        page_size=request.page_size
+    )
+    return results
 
-@api_router.get("/companies/{company_id}", response_model=Company)
+@api_router.get("/companies/{company_id}")
 async def get_company(
     company_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_super_admin)
 ):
-    """Get company by ID"""
-    return await company_service.get_company_by_id(company_id)
+    """Get company by ID (super admin only)"""
+    company = company_service.get_company_by_id(company_id)
+    if not company:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Company not found"
+        )
+    return company
 
-@api_router.patch("/companies/{company_id}", response_model=Company)
+@api_router.post("/companies")
+async def create_company(
+    request: CompanyCreateRequest,
+    current_user: User = Depends(require_super_admin)
+):
+    """Create new company (super admin only)"""
+    try:
+        company = company_service.create_company(request.dict())
+        return company
+    except Exception as e:
+        logger.error(f"Create company error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@api_router.put("/companies/{company_id}")
 async def update_company(
     company_id: str,
-    update_data: dict,
+    request: CompanyUpdateRequest,
     current_user: User = Depends(require_super_admin)
 ):
     """Update company (super admin only)"""
-    return await company_service.update_company(company_id, update_data)
+    try:
+        company = company_service.update_company(company_id, request.dict(exclude_unset=True))
+        return company
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 @api_router.delete("/companies/{company_id}")
 async def delete_company(
@@ -298,37 +437,68 @@ async def delete_company(
     current_user: User = Depends(require_super_admin)
 ):
     """Delete company (super admin only)"""
-    await company_service.delete_company(company_id)
-    return {"message": "Company deleted successfully"}
+    try:
+        company_service.delete_company(company_id)
+        return {"message": "Company deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 # ========== PLAN ENDPOINTS ==========
 
-@api_router.post("/plans", response_model=Plan)
+@api_router.get("/plans")
+async def get_plans(
+    page: int = 1,
+    page_size: int = 20
+):
+    """Get all plans (public)"""
+    plans = plan_service.get_all_plans(page=page, page_size=page_size)
+    return plans
+
+@api_router.get("/plans/{plan_id}")
+async def get_plan(plan_id: str):
+    """Get plan by ID (public)"""
+    plan = plan_service.get_plan_by_id(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    return plan
+
+@api_router.post("/plans")
 async def create_plan(
-    plan_data: PlanCreate,
+    request: PlanCreateRequest,
     current_user: User = Depends(require_super_admin)
 ):
-    """Create plan (super admin only)"""
-    return await plan_service.create_plan(plan_data)
+    """Create new plan (super admin only)"""
+    try:
+        plan = plan_service.create_plan(request.dict())
+        return plan
+    except Exception as e:
+        logger.error(f"Create plan error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@api_router.get("/plans", response_model=List[Plan])
-async def get_plans(active_only: bool = True):
-    """Get all plans"""
-    return await plan_service.get_all_plans(active_only)
-
-@api_router.get("/plans/{plan_id}", response_model=Plan)
-async def get_plan(plan_id: str):
-    """Get plan by ID"""
-    return await plan_service.get_plan_by_id(plan_id)
-
-@api_router.patch("/plans/{plan_id}", response_model=Plan)
+@api_router.put("/plans/{plan_id}")
 async def update_plan(
     plan_id: str,
-    update_data: dict,
+    request: PlanUpdateRequest,
     current_user: User = Depends(require_super_admin)
 ):
     """Update plan (super admin only)"""
-    return await plan_service.update_plan(plan_id, update_data)
+    try:
+        plan = plan_service.update_plan(plan_id, request.dict(exclude_unset=True))
+        return plan
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 @api_router.delete("/plans/{plan_id}")
 async def delete_plan(
@@ -336,10 +506,89 @@ async def delete_plan(
     current_user: User = Depends(require_super_admin)
 ):
     """Delete plan (super admin only)"""
-    await plan_service.delete_plan(plan_id)
-    return {"message": "Plan deleted successfully"}
+    try:
+        plan_service.delete_plan(plan_id)
+        return {"message": "Plan deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 # ========== BULK UPLOAD ENDPOINTS ==========
+
+@api_router.get("/bulk-upload/templates/{template_type}")
+async def download_template(
+    template_type: str,
+    current_user: User = Depends(require_super_admin)
+):
+    """Download CSV template for bulk upload (super admin only)"""
+    
+    templates = {
+        "profiles": [
+            "first_name", "last_name", "job_title", "company_name", "industry",
+            "emails", "phones", "city", "state", "country", "linkedin_url",
+            "experience_years", "skills"
+        ],
+        "companies": [
+            "name", "industry", "size", "revenue", "website", "description",
+            "city", "state", "country", "founded_year"
+        ],
+        "combined": [
+            "type", "first_name", "last_name", "job_title", "company_name", 
+            "industry", "emails", "phones", "city", "state", "country", 
+            "linkedin_url", "experience_years", "skills", "size", "revenue", 
+            "website", "description", "founded_year"
+        ]
+    }
+    
+    if template_type not in templates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid template type. Use 'profiles', 'companies', or 'combined'"
+        )
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(templates[template_type])
+    
+    # Add example row
+    if template_type == "profiles":
+        writer.writerow([
+            "John", "Doe", "CEO", "TechCorp Inc", "Technology",
+            "john.doe@techcorp.com", "+1-555-123-4567", "San Francisco", "CA", 
+            "USA", "https://linkedin.com/in/johndoe", "10", "Leadership,Strategy"
+        ])
+    elif template_type == "companies":
+        writer.writerow([
+            "TechCorp Inc", "Technology", "100-500", "$10M-$50M",
+            "https://techcorp.com", "Leading tech company", "San Francisco",
+            "CA", "USA", "2015"
+        ])
+    else:  # combined
+        writer.writerow([
+            "profile", "John", "Doe", "CEO", "TechCorp Inc", "Technology",
+            "john.doe@techcorp.com", "+1-555-123-4567", "San Francisco", "CA",
+            "USA", "https://linkedin.com/in/johndoe", "10", "Leadership,Strategy",
+            "", "", "", "", ""
+        ])
+        writer.writerow([
+            "company", "", "", "", "TechCorp Inc", "Technology",
+            "", "", "San Francisco", "CA", "USA", "", "", "",
+            "100-500", "$10M-$50M", "https://techcorp.com",
+            "Leading tech company", "2015"
+        ])
+    
+    # Return as downloadable file
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={template_type}_template.csv"
+        }
+    )
 
 @api_router.post("/bulk-upload")
 async def bulk_upload(
@@ -449,8 +698,8 @@ app.include_router(api_router)
 cors_origins = config.CORS_ORIGINS.split(',') if isinstance(config.CORS_ORIGINS, str) else ['*']
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
     allow_origins=cors_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
