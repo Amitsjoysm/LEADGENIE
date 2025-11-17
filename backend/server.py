@@ -102,7 +102,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     # Get user from database
-    user_data = user_service.get_user_by_email(email)
+    user_data = await user_service.get_user_by_email(email)
     if not user_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
