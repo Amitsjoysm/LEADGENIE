@@ -51,6 +51,16 @@ class UserService:
                 detail="Failed to fetch user"
             )
     
+    async def get_user_by_email(self, email: str) -> Optional[dict]:
+        """Get user by email"""
+        try:
+            user_doc = await self.db.users.find_one({"email": email}, {"_id": 0})
+            return user_doc
+            
+        except Exception as e:
+            logger.error(f"Get user by email error: {e}")
+            return None
+    
     async def update_user(self, user_id: str, user_update: UserUpdate) -> User:
         """Update user details"""
         try:
