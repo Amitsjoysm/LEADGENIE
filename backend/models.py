@@ -180,6 +180,41 @@ class Profile(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Company Models
+class CompanySearchRequest(BaseModel):
+    name: Optional[str] = None
+    industry: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    page: int = 1
+    page_size: int = 20
+
+class CompanyCreateRequest(BaseModel):
+    name: str
+    domain: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
+class CompanyUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    domain: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    revenue: Optional[str] = None
+    employee_size: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+
 class CompanyCreate(BaseModel):
     name: str
     domain: Optional[str] = None
