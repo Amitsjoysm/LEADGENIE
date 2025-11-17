@@ -350,6 +350,9 @@ async def create_profile(
         profile_create = ProfileCreate(**request.dict())
         profile = await profile_service.create_profile(profile_create)
         return profile
+    except HTTPException:
+        # Re-raise HTTPException with correct status code
+        raise
     except Exception as e:
         logger.error(f"Create profile error: {e}")
         raise HTTPException(
