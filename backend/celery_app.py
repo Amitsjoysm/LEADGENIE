@@ -23,3 +23,6 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=100,
 )
+
+# Auto-discover tasks
+celery_app.autodiscover_tasks(['tasks'], force=True)
