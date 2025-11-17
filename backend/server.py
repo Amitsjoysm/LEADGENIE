@@ -325,7 +325,7 @@ async def get_profile(
     current_user: User = Depends(require_super_admin)
 ):
     """Get profile by ID (super admin only)"""
-    profile = profile_service.get_profile_by_id(profile_id, mask_data=False)
+    profile = await profile_service.get_profile_by_id(profile_id, mask_data=False)
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
