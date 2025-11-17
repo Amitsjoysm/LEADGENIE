@@ -107,8 +107,8 @@ class LeadGenAPITester:
             user_data = {
                 "email": unique_email,
                 "password": "testpass123",
-                "full_name": "Test User",
-                "company": "Test Company"
+                "first_name": "Test",
+                "last_name": "User"
             }
             
             response = self.make_request("POST", "/auth/register", user_data)
