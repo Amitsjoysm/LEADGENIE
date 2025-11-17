@@ -332,7 +332,7 @@ class ProductionReadinessTest:
                                 profile_id = profiles[0].get("id")
                                 
                                 # Try to reveal phone (costs 3 credits) with 0 credits
-                                reveal_data = {"reveal_type": "phone"}
+                                reveal_data = {"profile_id": profile_id, "reveal_type": "phone"}
                                 response = self.make_request("POST", f"/profiles/{profile_id}/reveal", reveal_data, headers=user_headers)
                                 
                                 if response.status_code == 400:
