@@ -20,6 +20,43 @@ class CompanyService:
         shard = get_shard_key(name)
         return f'companies_{shard}'
     
+    async def find_company_by_domain(self, domain: str) -> Company:
+        """Find company by domain across all shards"""
+        try:
+            # Normalize domain (lowercase, strip)
+            domain = domain.lower().strip()
+            
+            # Check all shards
+            shards = [chr(i) for i in range(ord('a'), ord('z') + 1)] + ['other']
+            
+            for shard in shards:
+                collection_name = f'companies_{shard}'
+                company_doc = await self.db[collection_name].find_one(
+                    {"domain": domain}, 
+                    {"_id": 0}
+                )
+                if company_doc:
+                    return Company(**company_doc)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Find company by domain error: {e}")
+            return None
+    
+    async def check_domain_exists(self, domain: str) -> bool:
+        """Check if domain already exists in unique_domains collection"""
+        try:
+            # Normalize domain
+            domain = domain.lower().strip()
+            
+            existing = await self.db.unique_domains.find_one({"domain": domain})
+            return existing is not None
+            
+        except Exception as e:
+            logger.error(f"Check domain exists error: {e}")
+            return False
+    
     async def create_company(self, company_data: CompanyCreate) -> Company:
         """Create a new company"""
         try:
