@@ -564,13 +564,13 @@ class LeadGenAPITester:
             self.log_result("Profile Reveal", False, f"Exception: {str(e)}")
     
     def test_profile_get_by_id(self):
-        """Test getting profile by ID"""
-        if not self.user_token:
-            self.log_result("Profile Get by ID", False, "No user token available")
+        """Test getting profile by ID (super admin only)"""
+        if not self.admin_token:
+            self.log_result("Profile Get by ID", False, "No admin token available")
             return
             
         try:
-            headers = self.get_auth_headers(self.user_token)
+            headers = self.get_auth_headers(self.admin_token)
             
             # First get a profile ID
             search_filters = {"skip": 0, "limit": 1}
