@@ -58,21 +58,55 @@ class CompanyService:
             return False
     
     async def create_company(self, company_data: CompanyCreate) -> Company:
-        """Create a new company"""
+        """Create a new company with domain uniqueness check"""
         try:
+            # Normalize domain
+            domain = company_data.domain.lower().strip()
+            
+            # Check if domain already exists
+            if await self.check_domain_exists(domain):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Company with domain '{domain}' already exists"
+                )
+            
             collection_name = self._get_collection_name(company_data.name)
+            company_id = str(uuid.uuid4())
             
             company_dict = {
-                "id": str(uuid.uuid4()),
+                "id": company_id,
                 **company_data.dict(),
+                "domain": domain,  # Store normalized domain
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
+            # Insert company
             await self.db[collection_name].insert_one(company_dict)
+            
+            # Register domain in unique_domains collection
+            try:
+                await self.db.unique_domains.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "domain": domain,
+                    "company_id": company_id,
+                    "shard_name": collection_name,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+            except Exception as domain_err:
+                # Rollback company creation if domain registration fails
+                await self.db[collection_name].delete_one({"id": company_id})
+                logger.error(f"Failed to register domain: {domain_err}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to register company domain"
+                )
+            
             company_dict.pop('_id', None)
             return Company(**company_dict)
             
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Create company error: {e}")
             raise HTTPException(
