@@ -168,16 +168,24 @@ async def create_seed_data():
         await db.plans.insert_many(plans)
         print(f"   ✓ Created {len(plans)} subscription plans")
         
-        # 4. Create Companies
+        # 4. Create Companies with unique domains
         print("\n4. Creating companies (this may take a moment)...")
         companies_created = 0
+        company_map = {}  # domain -> company_id mapping
+        
+        # Clear unique_domains collection
+        await db.unique_domains.delete_many({})
+        
         for i in range(1000):  # Create 1000 companies
             city = random.choice(CITIES)
             industry = random.choice(INDUSTRIES)
+            company_id = str(uuid.uuid4())
+            domain = f"company{i+1}.com"
+            
             company = {
-                "id": str(uuid.uuid4()),
+                "id": company_id,
                 "name": f"{random.choice(COMPANY_NAMES)} {i+1}",
-                "domain": f"company{i+1}.com",
+                "domain": domain,
                 "linkedin_url": f"https://linkedin.com/company/company{i+1}",
                 "revenue": random.choice(REVENUE_RANGES),
                 "employee_size": random.choice(EMPLOYEE_SIZES),
@@ -193,12 +201,24 @@ async def create_seed_data():
             shard = get_shard_key(company['name'])
             collection_name = f'companies_{shard}'
             await db[collection_name].insert_one(company)
+            
+            # Register domain in unique_domains collection
+            await db.unique_domains.insert_one({
+                "id": str(uuid.uuid4()),
+                "domain": domain,
+                "company_id": company_id,
+                "shard_name": collection_name,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            company_map[domain] = company_id
             companies_created += 1
             
             if (i + 1) % 200 == 0:
                 print(f"   Progress: {i+1}/1000 companies created...")
         
         print(f"   ✓ Created {companies_created} companies across sharded collections")
+        print(f"   ✓ Registered {len(company_map)} unique domains")
         
         # 5. Create Profiles
         print("\n5. Creating profiles (this may take a few moments)...")
