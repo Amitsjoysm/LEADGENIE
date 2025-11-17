@@ -167,8 +167,9 @@ class Profile(BaseModel):
     sub_industry: Optional[str] = None
     keywords: List[str] = []
     seo_description: Optional[str] = None
-    company_name: str
-    company_domain: Optional[str] = None
+    company_id: str  # Foreign key to Company - hierarchical relationship
+    company_name: str  # Denormalized for quick access
+    company_domain: str  # Denormalized for quick access
     profile_linkedin_url: Optional[str] = None
     company_linkedin_url: Optional[str] = None
     emails: List[str] = []
