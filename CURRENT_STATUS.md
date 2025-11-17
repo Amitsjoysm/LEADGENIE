@@ -308,7 +308,7 @@ SMTP_PASS=<user-provided>
 
 ### Frontend (`/app/frontend/.env`)
 ```
-REACT_APP_BACKEND_URL=https://endpoint-verify-1.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://domain-relation.preview.emergentagent.com
 ```
 
 **CRITICAL**: Never modify URLs/ports in .env files. They are production-configured.
