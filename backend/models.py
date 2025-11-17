@@ -255,6 +255,11 @@ class ProfileFilter(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     keywords: Optional[List[str]] = None
+    experience_years_min: Optional[int] = None
+    experience_years_max: Optional[int] = None
+    company_size: Optional[str] = None
+    revenue_range: Optional[str] = None
+    skills: Optional[str] = None
     page: int = 1
     page_size: int = 20
 
