@@ -542,3 +542,27 @@ agent_communication:
       - Rate limiting enforced
       - Credit system secure and atomic
       - Bulk upload infrastructure operational
+  - agent: "main"
+    message: |
+      🔄 POST-RESTART VERIFICATION NEEDED
+      
+      After codebase sync and service restart, need to verify:
+      1. All services restarted successfully (✅ confirmed)
+      2. Redis and Celery working with new seed data
+      3. All API endpoints functioning with 5000 profiles and 1000 companies
+      4. Authentication with new user credentials
+      5. Credit reveal system with fresh user credits
+      6. Rate limiting still working
+      7. Bulk upload infrastructure operational
+      
+      🎯 REQUESTING COMPREHENSIVE BACKEND TESTING
+      Test with new credentials:
+      - Super Admin: admin@leadgen.com / admin123 (1000 credits)
+      - Regular User: user1@example.com / password123 (50 credits)
+      
+      Focus areas:
+      - Profile search with 5000 profiles
+      - Company search with 1000 companies
+      - Credit reveal functionality
+      - Bulk upload status endpoint
+      - Rate limiting verification
