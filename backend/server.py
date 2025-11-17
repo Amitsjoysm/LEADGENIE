@@ -245,7 +245,7 @@ async def delete_user(
 ):
     """Delete user (super admin only)"""
     try:
-        user_service.delete_user(user_id)
+        await user_service.delete_user(user_id)
         return {"message": "User deleted successfully"}
     except ValueError as e:
         raise HTTPException(
