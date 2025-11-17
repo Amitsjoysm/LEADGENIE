@@ -275,6 +275,21 @@ class RevealRequest(BaseModel):
     reveal_type: str  # 'email' or 'phone'
 
 # Plan Models
+class PlanCreateRequest(BaseModel):
+    name: str
+    credits: int
+    price: float
+    duration_days: int
+    features: List[str] = []
+
+class PlanUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    credits: Optional[int] = None
+    price: Optional[float] = None
+    duration_days: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
 class PlanCreate(BaseModel):
     name: str
     credits: int
