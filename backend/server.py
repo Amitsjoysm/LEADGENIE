@@ -282,10 +282,15 @@ async def search_profiles(
 ):
     """Search profiles with filters"""
     is_admin = current_user.role == "super_admin"
-    results = profile_service.search_profiles(
-        filters=request.dict(exclude={'page', 'page_size'}),
+    # Create ProfileFilter object
+    filter_data = request.dict(exclude={'page', 'page_size'})
+    profile_filter = ProfileFilter(
         page=request.page,
         page_size=request.page_size,
+        **filter_data
+    )
+    results = await profile_service.get_profiles(
+        filters=profile_filter,
         mask_data=not is_admin
     )
     return results
